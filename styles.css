@@ -1,0 +1,338 @@
+:root {
+    --primary-color: #00ff00;
+    --background-color: #000000;
+    --accent-color: #003300;
+    --glow-color: rgba(0, 255, 0, 0.5);
+    --control-bg: rgba(0, 0, 0, 0.8);
+    --text-shadow: 0 0 5px var(--primary-color);
+    --control-border: 1px solid var(--primary-color);
+    --transition-speed: 0.3s;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--primary-color);
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    height: 100vh;
+    position: relative;
+}
+
+#ascii-container {
+    width: 100vw;
+    height: 100vh;
+    white-space: pre;
+    line-height: 1;
+    cursor: crosshair;
+    text-shadow: 
+        0 0 10px var(--primary-color),
+        0 0 20px rgba(0, 255, 0, 0.3),
+        0 0 5px rgba(255, 255, 255, 0.5),
+        0 0 2px rgba(255, 255, 255, 0.8);
+    transition: font-size var(--transition-speed) ease;
+    filter: contrast(1.2) brightness(1.1);
+    mix-blend-mode: screen;
+}
+
+/* Stats Display */
+.stats {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.8em;
+    z-index: 2;
+    background: var(--control-bg);
+    padding: 10px;
+    border-radius: 5px;
+    border: var(--control-border);
+    background: rgba(0, 0, 0, 0.6);
+    animation: pulse-glow 2s infinite alternate;
+}
+
+@keyframes pulse-glow {
+    from { box-shadow: 0 0 5px var(--primary-color); }
+    to { box-shadow: 0 0 15px var(--primary-color); }
+}
+
+/* Controls */
+.controls {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    background: var(--control-bg);
+    padding: 20px;
+    border-radius: 15px;
+    border: var(--control-border);
+    box-shadow: 0 0 20px var(--glow-color);
+    backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--primary-color);
+    box-shadow: 0 0 30px var(--glow-color);
+}
+
+.control-panel {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.theme-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    padding-top: 15px;
+    border-top: var(--control-border);
+}
+
+/* Buttons */
+.glow-button {
+    background: transparent;
+    border: var(--control-border);
+    color: var(--primary-color);
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all var(--transition-speed) ease;
+    min-width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.glow-button:hover {
+    background: var(--primary-color);
+    color: var(--background-color);
+    box-shadow: 0 0 15px var(--glow-color);
+    transform: scale(1.05);
+}
+
+.button-text {
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+/* Sliders */
+.slider-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 100px;
+}
+
+.slider-container label {
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--primary-color);
+    border-radius: 2px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 10px var(--glow-color);
+    transform: scale(1.2);
+}
+
+/* Color Pickers */
+.color-picker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+input[type="color"] {
+    -webkit-appearance: none;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background: transparent;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: var(--control-border);
+    border-radius: 4px;
+}
+
+/* Shortcuts Display */
+.mode-info {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2;
+    background: var(--control-bg);
+    padding: 15px;
+    border-radius: 10px;
+    border: var(--control-border);
+}
+
+.shortcuts {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.shortcut {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+kbd {
+    background: var(--primary-color);
+    color: var(--background-color);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* Animations */
+@keyframes glow {
+    0% { box-shadow: 0 0 5px var(--glow-color); }
+    50% { box-shadow: 0 0 20px var(--glow-color); }
+    100% { box-shadow: 0 0 5px var(--glow-color); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .controls {
+        width: 90%;
+        padding: 15px;
+    }
+
+    .control-panel {
+        gap: 10px;
+    }
+
+    .slider-container {
+        min-width: 80px;
+    }
+
+    .mode-info {
+        display: none;
+    }
+
+    .stats {
+        font-size: 0.7em;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    :root {
+        --text-shadow: none;
+        --glow-color: var(--primary-color);
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Dynamic Background Effects */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        45deg,
+        var(--background-color),
+        var(--accent-color),
+        var(--background-color)
+    );
+    opacity: 0.1;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Add dropdown styling */
+.glow-dropdown {
+    background: var(--control-bg);
+    border: var(--control-border);
+    color: var(--primary-color);
+    padding: 8px 12px;
+    font-family: 'Courier New', monospace;
+    text-shadow: var(--text-shadow);
+    margin: 5px;
+    transition: all var(--transition-speed) ease;
+    cursor: pointer;
+}
+
+.glow-dropdown option {
+    background: var(--background-color);
+    color: var(--primary-color);
+}
+
+.glow-dropdown:hover {
+    box-shadow: 0 0 10px var(--glow-color);
+}
+
+/* Add these styles at the end of the file */
+.hide-menu-button {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+}
+
+.hidden {
+    display: none;
+}
+
+.random-color {
+    animation: randomColors 5s infinite alternate;
+    filter: hue-rotate(90deg);
+}
+
+@keyframes randomColors {
+    0% { filter: hue-rotate(0deg) contrast(1.2); }
+    100% { filter: hue-rotate(360deg) contrast(1.5); }
+}

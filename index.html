@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Art Experience</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="ascii-container"></div>
+    
+    <div class="stats">
+        <div class="fps">FPS: 60</div>
+        <div class="resolution">0 x 0</div>
+        <div class="mode-name">Current Mode: Wave</div>
+    </div>
+
+    <div class="hide-menu-button">
+        <button id="toggle-menu" class="glow-button">Hide Menus</button>
+    </div>
+
+    <div class="controls">
+        <div class="control-panel">
+            <select id="mode-selector" class="glow-dropdown">
+                <!-- Options will be populated by JavaScript -->
+            </select>
+            
+            <select id="char-selector" class="glow-dropdown">
+                <!-- Options will be populated by JavaScript -->
+            </select>
+
+            <div class="slider-container">
+                <label for="speed">Speed</label>
+                <input type="range" id="speed" min="1" max="100" value="50">
+                <span class="speed-value">50</span>
+            </div>
+
+            <div class="slider-container">
+                <label for="char-size">Size</label>
+                <input type="range" class="char-size-control" min="8" max="50" value="20">
+                <span class="char-size-value">20</span>
+            </div>
+
+            <div class="slider-container">
+                <label for="cellular-density">Density</label>
+                <input type="range" id="cellular-density" min="0.1" max="0.9" step="0.1" value="0.5">
+                <span class="cellular-density-value">0.5</span>
+            </div>
+
+            <div class="slider-container">
+                <label for="cellular-speed">Speed</label>
+                <input type="range" id="cellular-speed" min="1" max="100" value="50">
+                <span class="cellular-speed-value">50</span>
+            </div>
+
+            <button id="random-color" class="control-btn" 
+                    aria-label="Randomize colors"
+                    title="Random Color Mode (R)">
+                🎨 Random Colors
+            </button>
+        </div>
+
+        <div class="theme-controls">
+            <div class="color-picker">
+                <input type="color" id="primary-color" value="#00ff00">
+                <label>Primary</label>
+            </div>
+            <div class="color-picker">
+                <input type="color" id="background-color" value="#000000">
+                <label>Background</label>
+            </div>
+            <button id="cycle-theme" class="glow-button">Theme</button>
+        </div>
+    </div>
+
+    <div class="mode-info">
+        <div class="shortcuts">
+            <div class="shortcut">
+                <kbd>Space</kbd>
+                <span>Auto Mode</span>
+            </div>
+            <div class="shortcut">
+                <kbd>M</kbd>
+                <span>Change Mode</span>
+            </div>
+            <div class="shortcut">
+                <kbd>C</kbd>
+                <span>Change Char</span>
+            </div>
+            <div class="shortcut">
+                <kbd>T</kbd>
+                <span>Change Theme</span>
+            </div>
+            <div class="shortcut">
+                <kbd>R</kbd>
+                <span>Reset</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="constants.js"></script>
+    <script src="utilities.js"></script>
+    <script src="event-handlers.js"></script>
+    <script src="patterns/wave.js"></script>
+    <script src="patterns/spiral.js"></script>
+    <script src="patterns/vortex.js"></script>
+    <script src="patterns/mandala.js"></script>
+    <script src="patterns/tunnel.js"></script>
+    <script src="patterns/fractal.js"></script>
+    <script src="patterns/interference.js"></script>
+    <script src="patterns/psychedelic.js"></script>
+    <script src="patterns/cellular.js"></script>
+    <script src="patterns/shockwave.js"></script>
+    <script src="patterns/rain.js"></script>
+    <script src="patterns/plasma.js"></script>
+    <script src="ascii-effect.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
