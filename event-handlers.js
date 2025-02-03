@@ -20,32 +20,29 @@ const handleCharSetChange = (effect, direction) => {
 // Add these constants at the top of the file
 const MIN_ZOOM_SCALE = 0.5;
 const MAX_ZOOM_SCALE = 2.0;
-const ZOOM_SENSITIVITY = 0.01;
+const ZOOM_SENSITIVITY = 0.1;
 
 // Add this function to handle pinch zoom
 const handlePinchZoom = (effect, initialDistance, currentDistance) => {
     const scale = currentDistance / initialDistance;
     const currentSize = parseInt(document.querySelector('.char-size-control').value, 10);
     
-    // Calculate new size based on scale direction
-    let newSize;
-    if (scale > 1) {
-        // Zoom in (increase size)
-        newSize = currentSize * (1 + (scale - 1) * ZOOM_SENSITIVITY);
-    } else {
-        // Zoom out (decrease size)
-        newSize = currentSize * (1 - (1 - scale) * ZOOM_SENSITIVITY);
-    }
+    // Use logarithmic scaling for better control
+    const zoomFactor = Math.log2(scale);
+    const newSize = Math.min(
+        50, // Max size from the slider
+        Math.max(
+            8, // Min size from the slider
+            currentSize * (1 + zoomFactor * ZOOM_SENSITIVITY)
+        )
+    );
     
-    // Clamp the size between min and max values
-    newSize = Math.min(50, Math.max(8, Math.round(newSize)));
+    effect.setCharSize(Math.round(newSize));
+    document.querySelector('.char-size-value').textContent = Math.round(newSize);
+    document.querySelector('.char-size-control').value = Math.round(newSize);
     
-    // Update the effect and UI
-    if (newSize !== currentSize) {
-        effect.setCharSize(newSize);
-        document.querySelector('.char-size-value').textContent = newSize;
-        document.querySelector('.char-size-control').value = newSize;
-    }
+    // Update initial distance for next calculation
+    initialDistance = currentDistance;
 };
 
 function setupEventHandlers(effect) {
@@ -95,11 +92,8 @@ function setupEventHandlers(effect) {
                 touch2.clientY - touch1.clientY
             );
             
-            // Only handle the zoom if the distance has changed significantly
-            if (Math.abs(currentDistance - initialDistance) > 5) {
-                handlePinchZoom(effect, initialDistance, currentDistance);
-                initialDistance = currentDistance; // Update the reference distance
-            }
+            // Handle the zoom
+            handlePinchZoom(effect, initialDistance, currentDistance);
         }
     });
 
