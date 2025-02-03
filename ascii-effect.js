@@ -45,10 +45,6 @@ class ASCIIEffect {
         this.cellularSmoothing = 0.5;
         this.matrixColumns = null;
         this.firstMatrixFrame = true;
-        this.videoElement = null;
-        this.canvas = null;
-        this.canvasCtx = null;
-        this.isCameraInitialized = false;
         this.updateDimensions();
         this.initMatrix();
     }
@@ -97,11 +93,6 @@ class ASCIIEffect {
             case 'Matrix':
                 this.matrixColumns = null;
                 this.firstMatrixFrame = true;
-                break;
-            case 'Camera':
-                if (!this.isCameraInitialized) {
-                    this.initializeCamera();
-                }
                 break;
             // Add other pattern resets as needed
         }
@@ -154,10 +145,7 @@ class ASCIIEffect {
             ripples: this.ripples,
             cellularGrid: this.cellularGrid,
             isBinary: this.charSets[this.currentCharSet].name === 'Binary',
-            firstMatrixFrame: this.firstMatrixFrame,
-            videoElement: this.videoElement,
-            canvas: this.canvas,
-            canvasCtx: this.canvasCtx
+            firstMatrixFrame: this.firstMatrixFrame
         };
         
         // Update click intensity decay
@@ -209,9 +197,6 @@ class ASCIIEffect {
             }
             case 'Matrix': 
                 generateMatrixPattern(context, time); 
-                break;
-            case 'Camera': 
-                generateCameraPattern(context, time); 
                 break;
         }
         
@@ -316,21 +301,5 @@ class ASCIIEffect {
     setCharSize(newSize) {
         this.charSize = Math.max(12, newSize);
         this.updateDimensions();
-    }
-
-    async initializeCamera() {
-        try {
-            this.videoElement = document.createElement('video');
-            this.canvas = document.createElement('canvas');
-            this.canvasCtx = this.canvas.getContext('2d');
-            
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            this.videoElement.srcObject = stream;
-            await this.videoElement.play();
-            this.isCameraInitialized = true;
-        } catch (error) {
-            console.error('Error accessing camera:', error);
-            alert('Camera access failed. Please ensure you have granted camera permissions.');
-        }
     }
 } 

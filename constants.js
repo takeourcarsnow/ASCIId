@@ -21,7 +21,7 @@ const MODES = [
     'Wave', 'Spiral', 'Vortex',
     'Mandala', 'Tunnel', 'Fractal', 'Interference', 
     'Psychedelic', 'Cellular', 'Shockwave', 'Plasma', 'Ripple',
-    'Matrix', 'Camera'
+    'Matrix'
 ];
 
 const CHAR_SETS = [
