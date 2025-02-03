@@ -25,11 +25,12 @@ const ZOOM_SENSITIVITY = 0.01;
 // Add this function to handle pinch zoom
 const handlePinchZoom = (effect, initialDistance, currentDistance) => {
     const scale = currentDistance / initialDistance;
+    const currentSize = parseInt(document.querySelector('.char-size-control').value, 10);
     const newSize = Math.min(
-        MAX_ZOOM_SCALE,
+        50, // Max size from the slider
         Math.max(
-            MIN_ZOOM_SCALE,
-            effect.charSize * (1 + (scale - 1) * ZOOM_SENSITIVITY)
+            8, // Min size from the slider
+            currentSize * (1 + (scale - 1) * ZOOM_SENSITIVITY)
         )
     );
     effect.setCharSize(Math.round(newSize));
@@ -38,6 +39,10 @@ const handlePinchZoom = (effect, initialDistance, currentDistance) => {
 };
 
 function setupEventHandlers(effect) {
+    // Add pinch zoom state
+    let initialDistance = null;
+    let lastScale = 1;
+
     // Mouse events
     effect.container.addEventListener('mousemove', (e) => {
         const rect = effect.container.getBoundingClientRect();
@@ -56,16 +61,6 @@ function setupEventHandlers(effect) {
 
     // Touch events
     effect.container.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        const rect = effect.container.getBoundingClientRect();
-        effect.mouseX = Math.floor((touch.clientX - rect.left) / effect.charWidth);
-        effect.mouseY = Math.floor((touch.clientY - rect.top) / effect.fontSize);
-        effect.isMouseDown = true;
-        effect.lastClickTime = performance.now();
-
-        // Add pinch zoom handling
-        let initialDistance = null;
         if (e.touches.length === 2) {
             // Calculate initial distance between two fingers
             const touch1 = e.touches[0];
@@ -74,18 +69,14 @@ function setupEventHandlers(effect) {
                 touch2.clientX - touch1.clientX,
                 touch2.clientY - touch1.clientY
             );
+            lastScale = 1;
         }
     });
 
     effect.container.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        const rect = effect.container.getBoundingClientRect();
-        effect.mouseX = Math.floor((touch.clientX - rect.left) / effect.charWidth);
-        effect.mouseY = Math.floor((touch.clientY - rect.top) / effect.fontSize);
-
-        // Add pinch zoom handling
         if (e.touches.length === 2 && initialDistance !== null) {
+            e.preventDefault();
+            
             // Calculate current distance between two fingers
             const touch1 = e.touches[0];
             const touch2 = e.touches[1];
@@ -100,12 +91,9 @@ function setupEventHandlers(effect) {
     });
 
     effect.container.addEventListener('touchend', () => {
-        effect.isMouseDown = false;
-
         // Reset initial distance when touch ends
-        if (e.touches.length < 2) {
-            initialDistance = null;
-        }
+        initialDistance = null;
+        lastScale = 1;
     });
 
     // Control events
