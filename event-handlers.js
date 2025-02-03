@@ -26,16 +26,26 @@ const ZOOM_SENSITIVITY = 0.01;
 const handlePinchZoom = (effect, initialDistance, currentDistance) => {
     const scale = currentDistance / initialDistance;
     const currentSize = parseInt(document.querySelector('.char-size-control').value, 10);
-    const newSize = Math.min(
-        50, // Max size from the slider
-        Math.max(
-            8, // Min size from the slider
-            currentSize * (1 + (scale - 1) * ZOOM_SENSITIVITY)
-        )
-    );
-    effect.setCharSize(Math.round(newSize));
-    document.querySelector('.char-size-value').textContent = Math.round(newSize);
-    document.querySelector('.char-size-control').value = Math.round(newSize);
+    
+    // Calculate new size based on scale direction
+    let newSize;
+    if (scale > 1) {
+        // Zoom in (increase size)
+        newSize = currentSize * (1 + (scale - 1) * ZOOM_SENSITIVITY);
+    } else {
+        // Zoom out (decrease size)
+        newSize = currentSize * (1 - (1 - scale) * ZOOM_SENSITIVITY);
+    }
+    
+    // Clamp the size between min and max values
+    newSize = Math.min(50, Math.max(8, Math.round(newSize)));
+    
+    // Update the effect and UI
+    if (newSize !== currentSize) {
+        effect.setCharSize(newSize);
+        document.querySelector('.char-size-value').textContent = newSize;
+        document.querySelector('.char-size-control').value = newSize;
+    }
 };
 
 function setupEventHandlers(effect) {
@@ -85,8 +95,11 @@ function setupEventHandlers(effect) {
                 touch2.clientY - touch1.clientY
             );
             
-            // Handle the zoom
-            handlePinchZoom(effect, initialDistance, currentDistance);
+            // Only handle the zoom if the distance has changed significantly
+            if (Math.abs(currentDistance - initialDistance) > 5) {
+                handlePinchZoom(effect, initialDistance, currentDistance);
+                initialDistance = currentDistance; // Update the reference distance
+            }
         }
     });
 
