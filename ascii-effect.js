@@ -211,6 +211,7 @@ class ASCIIEffect {
         if (this.modeDisplay) this.modeDisplay.textContent = this.modes[this.currentMode];
         this.modeNameDisplay.textContent = `Current Mode: ${this.modes[this.currentMode]}`;
         document.getElementById('mode-selector').value = this.currentMode;
+        updateSettingsVisibility(this, this.modes[this.currentMode]);
     }
 
     cycleChar() {
@@ -287,12 +288,19 @@ class ASCIIEffect {
         
         this.generatePattern();
         
-        // Optimized rendering using single string buffer
-        let buffer = '';
-        for (let i = 0; i < this.height; i++) {
-            buffer += this.matrix[i].join('') + '\n';
+        // Before the buffer creation
+        if (this.modes[this.currentMode] === 'Matrix') {
+            this.container.style.willChange = 'contents';
+        } else {
+            this.container.style.willChange = 'auto';
         }
-        this.container.textContent = buffer;
+        
+        // Replace the buffer loop with more efficient concatenation
+        const lineArrays = [];
+        for (let i = 0; i < this.height; i++) {
+            lineArrays.push(this.matrix[i].join(''));
+        }
+        this.container.textContent = lineArrays.join('\n');
         
         this.frame++;
         requestAnimationFrame(time => this.animate(time));

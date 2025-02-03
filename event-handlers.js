@@ -2,6 +2,14 @@ const handleModeChange = (effect, direction) => {
     const currentIndex = effect.currentMode;
     const newIndex = (currentIndex + direction + effect.modes.length) % effect.modes.length;
     effect.setMode(newIndex);
+    
+    // Update the dropdown menu
+    const modeSelector = document.getElementById('mode-selector');
+    if (modeSelector) {
+        modeSelector.selectedIndex = newIndex;
+    }
+
+    updateSettingsVisibility(effect, effect.modes[newIndex]);
 };
 
 const handleCharSetChange = (effect, direction) => {
@@ -15,6 +23,49 @@ const handleCharSetChange = (effect, direction) => {
     if (charSelector) {
         charSelector.selectedIndex = newIndex;
     }
+};
+
+const updateSettingsVisibility = (effect, currentModeName) => {
+    const settingsMap = {
+        'Wave': ['speed-container', 'char-size-container'],
+        'Spiral': ['speed-container', 'char-size-container'],
+        'Vortex': ['speed-container', 'char-size-container'],
+        'Mandala': ['speed-container', 'char-size-container'],
+        'Tunnel': ['speed-container', 'char-size-container'],
+        'Fractal': ['speed-container', 'char-size-container'],
+        'Interference': ['speed-container', 'char-size-container'],
+        'Psychedelic': ['speed-container', 'char-size-container'],
+        'Shockwave': ['speed-container', 'char-size-container'],
+        'Plasma': ['speed-container', 'char-size-container'],
+        'Ripple': ['speed-container', 'char-size-container'],
+        'Rain': ['speed-container', 'char-size-container'],
+        'Matrix': ['speed-container', 'char-size-container'],
+        'Cellular': [
+            'char-size-container',
+            'cellular-density-container',
+            'cellular-iterations-container',
+            'cellular-threshold-container',
+            'cellular-smoothing-container'
+        ]
+    };
+
+    // Hide all settings first
+    const allSettings = Array.from(document.querySelectorAll('.slider-container')).map(el => el.id);
+    allSettings.forEach(settingId => {
+        const settingElement = document.getElementById(settingId);
+        if (settingElement) {
+            settingElement.classList.add('hidden');
+        }
+    });
+
+    // Then show only relevant settings for the current mode
+    const visibleSettings = settingsMap[currentModeName] || ['speed-container', 'char-size-container']; // Default to speed and size
+    visibleSettings.forEach(settingId => {
+        const settingElement = document.getElementById(settingId);
+        if (settingElement) {
+            settingElement.classList.remove('hidden');
+        }
+    });
 };
 
 function setupEventHandlers(effect) {
@@ -81,18 +132,32 @@ function setupEventHandlers(effect) {
                 ), 50);
                 
                 // Update size control and effect
-                const sizeInput = document.querySelector('.char-size-control');
+                const sizeInput = document.getElementById('char-size');
                 const sizeValue = document.querySelector('.char-size-value');
-                sizeInput.value = newSize;
-                sizeValue.textContent = newSize;
-                effect.setCharSize(newSize);
+                if (sizeInput && sizeValue) {
+                    sizeInput.value = newSize;
+                    sizeValue.textContent = newSize;
+                    effect.setCharSize(newSize);
+                }
             }
-        } else {
-            // Existing single touch handling
+        } else if (e.touches.length === 1) {
+            // Handle swipe for mode change
             const touch = e.touches[0];
             const rect = effect.container.getBoundingClientRect();
-            effect.mouseX = Math.floor((touch.clientX - rect.left) / effect.charWidth);
-            effect.mouseY = Math.floor((touch.clientY - rect.top) / effect.fontSize);
+            const currentX = touch.clientX;
+            
+            if (typeof this.lastTouchX === 'number') {
+                const deltaX = currentX - this.lastTouchX;
+                if (Math.abs(deltaX) > 30) { // Swipe threshold
+                    if (deltaX > 0) {
+                        handleModeChange(effect, 1); // Swipe right - next mode
+                    } else {
+                        handleModeChange(effect, -1); // Swipe left - previous mode
+                    }
+                    this.lastTouchX = null; // Reset after handling swipe
+                }
+            }
+            this.lastTouchX = currentX;
         }
     });
 
@@ -216,6 +281,8 @@ function setupEventHandlers(effect) {
     document.getElementById('next-mode').onclick = () => handleModeChange(effect, 1);
     document.getElementById('prev-char').onclick = () => handleCharSetChange(effect, -1);
     document.getElementById('next-char').onclick = () => handleCharSetChange(effect, 1);
+
+    updateSettingsVisibility(effect, effect.modes[effect.currentMode]);
 }
 
 // Add this function to handle menu toggling
@@ -227,18 +294,33 @@ function setupMenuToggle(effect) {
         document.querySelector('.mode-info')
     ];
 
-    toggleButton.addEventListener('click', () => {
+    // Add touch event for mobile devices
+    toggleButton.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        toggleButton.classList.add('active');
+        toggleMenu();
+    });
+
+    toggleButton.addEventListener('touchend', () => {
+        toggleButton.classList.remove('active');
+    });
+
+    toggleButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleMenu();
+    });
+
+    const toggleMenu = () => {
         elementsToHide.forEach(element => {
             element.classList.toggle('hidden');
         });
         toggleButton.innerHTML = toggleButton.innerHTML === '&#128065;' ? '&#128308;' : '&#128065;';
         
-        // Add this to ensure controls are visible when toggled
         if (!document.querySelector('.controls').classList.contains('hidden')) {
             document.querySelector('.controls').scrollIntoView({ 
                 behavior: 'auto',
                 block: 'center'
             });
         }
-    });
+    };
 } 

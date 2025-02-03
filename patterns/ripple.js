@@ -1,27 +1,34 @@
 function generateRipplePattern(context, time) {
-    const { matrix, ripples, width, height, chars } = context;
-    const tempMatrix = matrix.map(row => [...row]);
+    const { matrix, width, height, chars } = context;
+    
+    // Initialize ripple state if it doesn't exist
+    if (!context.ripples) {
+        context.ripples = [];
+        // Clear the matrix when ripple mode is first selected
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                matrix[y][x] = ' ';
+            }
+        }
+    }
 
-    // Add new ripples on click
-    if(context.isMouseDown && performance.now() - context.lastClickTime < 100) {
-        const maxRadius = Math.max(width, height) * 0.8;
-        const intensity = 0.5 + Math.random() * 0.5; // Random intensity
-        ripples.push({
+    // Handle mouse click to create new ripple
+    if (context.isMouseDown && performance.now() - context.lastClickTime < 100) {
+        context.ripples.push({
             x: context.mouseX,
             y: context.mouseY,
             radius: 0,
-            maxRadius: maxRadius,
+            // Set max radius to cover entire screen plus some margin
+            maxRadius: Math.max(width, height) * 1.5,
             speed: 0.5 + Math.random() * 0.3, // Random speed
             life: 1,
-            intensity: intensity,
-            startTime: performance.now(),
-            charSet: chars.slice(Math.floor(Math.random() * (chars.length / 2))) // Random character set
+            startTime: performance.now()
         });
         context.lastClickTime = performance.now();
     }
 
-    // Update existing ripples
-    ripples.forEach(ripple => {
+    // Update existing ripples with smooth ramping
+    context.ripples.forEach(ripple => {
         // Speed ramp: slow down as ripple expands
         const age = (performance.now() - ripple.startTime) / 1000;
         const speedFactor = Math.max(0.1, 1 - (age * 0.2));
@@ -29,60 +36,40 @@ function generateRipplePattern(context, time) {
         
         // Calculate life based on radius and add fade-out effect
         const radiusRatio = ripple.radius / ripple.maxRadius;
-        ripple.life = (1 - Math.pow(radiusRatio, 2)) * ripple.intensity;
-        
-        // Add ripple decay
-        ripple.intensity *= 0.99;
-        
-        // Edge reflection
-        if (ripple.x - ripple.radius < 0 || ripple.x + ripple.radius > width ||
-            ripple.y - ripple.radius < 0 || ripple.y + ripple.radius > height) {
-            ripple.speed *= 0.95; // Slow down when hitting edges
-        }
-        
-        // Remove dead ripples
-        if (ripple.radius > ripple.maxRadius * 1.1 || ripple.intensity < 0.1) {
-            ripple.life = 0;
-        }
+        ripple.life = (1 - Math.pow(radiusRatio, 2));
     });
+    context.ripples = context.ripples.filter(r => r.life > 0);
 
-    // Filter out dead ripples
-    context.ripples = ripples.filter(r => r.life > 0);
+    // Create a temporary matrix to store the new frame
+    const tempMatrix = new Array(height);
+    for (let y = 0; y < height; y++) {
+        tempMatrix[y] = new Array(width).fill(' ');
+    }
 
-    // Render ripples with interaction
-    if (Array.isArray(ripples)) {
-        for (let i = 0; i < height; i++) {
-            for (let j = 0; j < width; j++) {
-                let maxIntensity = 0;
-                let selectedChar = ' ';
+    // Draw ripples with smooth intensity
+    context.ripples.forEach(ripple => {
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const dx = x - ripple.x;
+                const dy = y - ripple.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                // Find the strongest ripple effect at this position
-                ripples.forEach(ripple => {
-                    const dx = j - ripple.x;
-                    const dy = i - ripple.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
+                // Smooth ripple effect with intensity falloff
+                if (Math.abs(distance - ripple.radius) < 8) {
+                    const intensity = ripple.life * 
+                        (1 - Math.pow(Math.abs(distance - ripple.radius) / 8, 2));
                     
-                    if (Math.abs(distance - ripple.radius) < 8) {
-                        const intensity = ripple.life * 
-                            (1 - Math.pow(Math.abs(distance - ripple.radius) / 8, 2));
-                        
-                        if (intensity > maxIntensity) {
-                            maxIntensity = intensity;
-                            // Use different characters based on intensity
-                            const charIndex = Math.floor(intensity * (ripple.charSet.length - 1));
-                            selectedChar = ripple.charSet[charIndex];
-                        }
+                    if (intensity > 0.1) { // Lower threshold for more visible ripples
+                        const charIndex = Math.floor(intensity * (chars.length - 1));
+                        // Blend with existing characters
+                        tempMatrix[y][x] = tempMatrix[y][x] === ' ' ? 
+                            chars[charIndex] || chars[0] : 
+                            tempMatrix[y][x];
                     }
-                });
-                
-                // Blend with existing characters
-                if (maxIntensity > 0.2) {
-                    tempMatrix[i][j] = selectedChar;
                 }
             }
         }
-    }
+    });
 
-    // Return modified matrix instead of mutating context
     return tempMatrix;
 } 
