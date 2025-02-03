@@ -17,39 +17,7 @@ const handleCharSetChange = (effect, direction) => {
     }
 };
 
-// Add these constants at the top of the file
-const MIN_ZOOM_SCALE = 0.5;
-const MAX_ZOOM_SCALE = 2.0;
-const ZOOM_SENSITIVITY = 0.1;
-
-// Add this function to handle pinch zoom
-const handlePinchZoom = (effect, initialDistance, currentDistance) => {
-    const scale = currentDistance / initialDistance;
-    const currentSize = parseInt(document.querySelector('.char-size-control').value, 10);
-    
-    // Use logarithmic scaling for better control
-    const zoomFactor = Math.log2(scale);
-    const newSize = Math.min(
-        50, // Max size from the slider
-        Math.max(
-            8, // Min size from the slider
-            currentSize * (1 + zoomFactor * ZOOM_SENSITIVITY)
-        )
-    );
-    
-    effect.setCharSize(Math.round(newSize));
-    document.querySelector('.char-size-value').textContent = Math.round(newSize);
-    document.querySelector('.char-size-control').value = Math.round(newSize);
-    
-    // Update initial distance for next calculation
-    initialDistance = currentDistance;
-};
-
 function setupEventHandlers(effect) {
-    // Add pinch zoom state
-    let initialDistance = null;
-    let lastScale = 1;
-
     // Mouse events
     effect.container.addEventListener('mousemove', (e) => {
         const rect = effect.container.getBoundingClientRect();
@@ -67,40 +35,71 @@ function setupEventHandlers(effect) {
     });
 
     // Touch events
+    let initialDistance = null;
+    let initialFontSize = 20;
+
     effect.container.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        
+        // Handle two-finger touch for zoom
         if (e.touches.length === 2) {
-            // Calculate initial distance between two fingers
             const touch1 = e.touches[0];
             const touch2 = e.touches[1];
             initialDistance = Math.hypot(
                 touch2.clientX - touch1.clientX,
                 touch2.clientY - touch1.clientY
             );
-            lastScale = 1;
+            initialFontSize = effect.charSize;
+        } else {
+            // Existing single touch handling
+            const touch = e.touches[0];
+            const rect = effect.container.getBoundingClientRect();
+            effect.mouseX = Math.floor((touch.clientX - rect.left) / effect.charWidth);
+            effect.mouseY = Math.floor((touch.clientY - rect.top) / effect.fontSize);
+            effect.isMouseDown = true;
+            effect.lastClickTime = performance.now();
         }
     });
 
     effect.container.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2 && initialDistance !== null) {
-            e.preventDefault();
-            
-            // Calculate current distance between two fingers
+        e.preventDefault();
+        
+        // Handle two-finger zoom
+        if (e.touches.length === 2) {
             const touch1 = e.touches[0];
             const touch2 = e.touches[1];
             const currentDistance = Math.hypot(
                 touch2.clientX - touch1.clientX,
                 touch2.clientY - touch1.clientY
             );
-            
-            // Handle the zoom
-            handlePinchZoom(effect, initialDistance, currentDistance);
+
+            if (initialDistance !== null) {
+                const scale = currentDistance / initialDistance;
+                const newSize = Math.min(Math.max(
+                    Math.round(initialFontSize * scale), 
+                    8
+                ), 50);
+                
+                // Update size control and effect
+                const sizeInput = document.querySelector('.char-size-control');
+                const sizeValue = document.querySelector('.char-size-value');
+                sizeInput.value = newSize;
+                sizeValue.textContent = newSize;
+                effect.setCharSize(newSize);
+            }
+        } else {
+            // Existing single touch handling
+            const touch = e.touches[0];
+            const rect = effect.container.getBoundingClientRect();
+            effect.mouseX = Math.floor((touch.clientX - rect.left) / effect.charWidth);
+            effect.mouseY = Math.floor((touch.clientY - rect.top) / effect.fontSize);
         }
     });
 
     effect.container.addEventListener('touchend', () => {
-        // Reset initial distance when touch ends
+        // Reset zoom tracking
         initialDistance = null;
-        lastScale = 1;
+        effect.isMouseDown = false;
     });
 
     // Control events
