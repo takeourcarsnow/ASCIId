@@ -146,6 +146,11 @@ class ASCIIEffect {
             case 'Shockwave': generateShockwavePattern(context, time); break;
             case 'Plasma': generatePlasmaPattern(context, time); break;
             case 'Rain': generateRainPattern(context, time); break;
+            case 'Ripple': {
+                const newMatrix = generateRipplePattern(context, time);
+                if (newMatrix) this.matrix = newMatrix;
+                break;
+            }
         }
     }
 

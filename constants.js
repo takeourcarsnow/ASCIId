@@ -20,7 +20,7 @@ const MATRIX_CONFIG = {
 const MODES = [
     'Wave', 'Spiral', 'Vortex',
     'Mandala', 'Tunnel', 'Fractal', 'Interference', 
-    'Psychedelic', 'Cellular', 'Shockwave', 'Plasma', 'Rain'
+    'Psychedelic', 'Cellular', 'Shockwave', 'Plasma', 'Rain', 'Ripple'
 ];
 
 const CHAR_SETS = [
@@ -104,7 +104,7 @@ const CHAR_SETS = [
     },
     {
         name: 'Boxes',
-        chars: ['▁','▂','▃','▄','▅','▆','▇','█','▉','▊','▋','▌','▍','▎','▏']
+        chars: [' ','▂','▃','▄','▅','▆','▇','█','▉','▊','▋','▌','▍','▎','▏']
     },
     {
         name: 'Circles',
