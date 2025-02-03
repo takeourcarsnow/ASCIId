@@ -11,16 +11,19 @@ function generateSpiralPattern(context, time) {
             const distance = Math.sqrt(dx * dx + dy * dy);
             const angle = Math.atan2(dy, dx);
             
-            // Dynamic spiral parameters
-            const spiralValue = Math.sin(angle * 5 + distance * 0.1 * spinSpeed - time) *
-                              Math.cos(distance * 0.1 + time * 0.5) *
-                              (1 + (context.mouseY/height * 0.5));
+            // Inverted spiral calculation
+            const spiralValue = 1 - ( // Inversion happens here
+                Math.sin(angle * 5 + distance * 0.1 * spinSpeed - time) *
+                Math.cos(distance * 0.1 + time * 0.5) *
+                (1 + (context.mouseY/height * 0.5))
+            );
             
             // Add distance-based fading
             const distanceFade = 1 - Math.min(distance / (width/2), 1);
-            const normalized = (spiralValue + 1) / 2 * distanceFade;
+            const normalized = spiralValue * distanceFade;
             
-            const charIndex = Math.floor(normalized * (chars.length - 1));
+            // Reverse character mapping for better inversion effect
+            const charIndex = chars.length - 1 - Math.floor(normalized * (chars.length - 1));
             matrix[i][j] = chars[charIndex] || chars[0];
         }
     }

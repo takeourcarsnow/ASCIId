@@ -5,7 +5,7 @@ const REGENERATION_RATE = 0.02; // Rate of new cell generation
 const STABILITY_THRESHOLD = 0.01; // Density change threshold for stability
 
 function generateCellularPattern(context) {
-    const { width, height, cellularGrid, speed } = context;
+    const { width, height, cellularGrid, speed, cellularDensity, cellularIterations } = context;
     
     // Add at the beginning
     const isBinary = context.chars.length === 2 && context.chars.includes('0') && context.chars.includes('1');
@@ -34,28 +34,30 @@ function generateCellularPattern(context) {
 
     // Calculate next generation and track changes
     let changes = 0;
-    for (let i = 1; i < height-1; i++) {
-        for (let j = 1; j < width-1; j++) {
-            let neighbors = 0;
-            for (let di = -1; di <= 1; di++) {
-                for (let dj = -1; dj <= 1; dj++) {
-                    if (di === 0 && dj === 0) continue;
-                    const ni = i + di;
-                    const nj = j + dj;
-                    // Add safe array access
-                    if (grid[ni] && grid[ni][nj] && grid[ni][nj] !== ' ') {
-                        neighbors++;
+    for (let iter = 0; iter < cellularIterations; iter++) {
+        for (let i = 1; i < height-1; i++) {
+            for (let j = 1; j < width-1; j++) {
+                let neighbors = 0;
+                for (let di = -1; di <= 1; di++) {
+                    for (let dj = -1; dj <= 1; dj++) {
+                        if (di === 0 && dj === 0) continue;
+                        const ni = i + di;
+                        const nj = j + dj;
+                        // Add safe array access
+                        if (grid[ni] && grid[ni][nj] && grid[ni][nj] !== ' ') {
+                            neighbors++;
+                        }
                     }
                 }
+                
+                const currentCell = grid[i][j];
+                const newCell = (currentCell !== ' ')
+                    ? (neighbors === 2 || neighbors === 3) ? currentCell : ' '
+                    : (neighbors === 3) ? activeChars[Math.floor(Math.random() * activeChars.length)] : ' ';
+                
+                if (newCell !== currentCell) changes++;
+                newGrid[i][j] = newCell;
             }
-            
-            const currentCell = grid[i][j];
-            const newCell = (currentCell !== ' ')
-                ? (neighbors === 2 || neighbors === 3) ? currentCell : ' '
-                : (neighbors === 3) ? activeChars[Math.floor(Math.random() * activeChars.length)] : ' ';
-            
-            if (newCell !== currentCell) changes++;
-            newGrid[i][j] = newCell;
         }
     }
 
@@ -69,8 +71,8 @@ function generateCellularPattern(context) {
     const density = liveCells / ((width - 2) * (height - 2));
 
     // Add density-based regeneration
-    if (density < MIN_DENSITY) {
-        const regenerationCount = Math.floor(width * height * REGENERATION_RATE);
+    if (density < cellularDensity) {
+        const regenerationCount = Math.floor(width * height * REGENERATION_RATE * speed * 0.01);
         for (let n = 0; n < regenerationCount; n++) {
             const x = Math.floor(Math.random() * (width - 2)) + 1;
             const y = Math.floor(Math.random() * (height - 2)) + 1;
@@ -119,8 +121,8 @@ function generateCellularPattern(context) {
     }
 
     // Add controlled decay when density is too high
-    if (density > MAX_DENSITY) {
-        const decayCount = Math.floor(width * height * 0.01);
+    if (density > cellularDensity) {
+        const decayCount = Math.floor(width * height * 0.005 * speed * 0.01);
         for (let n = 0; n < decayCount; n++) {
             const x = Math.floor(Math.random() * (width - 2)) + 1;
             const y = Math.floor(Math.random() * (height - 2)) + 1;
@@ -131,7 +133,7 @@ function generateCellularPattern(context) {
     }
 
     // Add continuous perturbation
-    const perturbationRate = 0.0005;
+    const perturbationRate = 0.0001 * speed * 0.01;
     const perturbationCount = Math.floor(width * height * perturbationRate);
     for (let n = 0; n < perturbationCount; n++) {
         const x = Math.floor(Math.random() * (width - 2)) + 1;
@@ -151,7 +153,7 @@ function generateCellularPattern(context) {
         }
         
         if (hasNeighbor) {
-            const flipProbability = density < MIN_DENSITY ? 0.8 : 0.2;
+            const flipProbability = density < cellularDensity ? 0.8 : 0.2;
             if (Math.random() < flipProbability) {
                 newGrid[y][x] = newGrid[y][x] === ' ' 
                     ? activeChars[0] // Use the first character instead of random

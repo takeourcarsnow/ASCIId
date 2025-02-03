@@ -20,7 +20,8 @@ const MATRIX_CONFIG = {
 const MODES = [
     'Wave', 'Spiral', 'Vortex',
     'Mandala', 'Tunnel', 'Fractal', 'Interference', 
-    'Psychedelic', 'Cellular', 'Shockwave', 'Plasma', 'Rain', 'Ripple'
+    'Psychedelic', 'Cellular', 'Shockwave', 'Plasma', 'Ripple',
+    'Matrix', 'Camera'
 ];
 
 const CHAR_SETS = [

@@ -39,7 +39,16 @@ class ASCIIEffect {
         this.lastClickTime = 0;
         this.clickIntensity = 0;
         this.ripples = [];
-        this.cellularDensity = 0.5; // Default density for cellular mode
+        this.cellularDensity = 0.5;
+        this.cellularIterations = 5;
+        this.cellularThreshold = 0.5;
+        this.cellularSmoothing = 0.5;
+        this.matrixColumns = null;
+        this.firstMatrixFrame = true;
+        this.videoElement = null;
+        this.canvas = null;
+        this.canvasCtx = null;
+        this.isCameraInitialized = false;
         this.updateDimensions();
         this.initMatrix();
     }
@@ -66,25 +75,55 @@ class ASCIIEffect {
         this.width = Math.floor(window.innerWidth / this.charWidth);
         this.height = Math.floor(window.innerHeight / this.fontSize);
         
-        // Add this to prevent layout shifts
+        // Batch updates to prevent layout thrashing
         requestAnimationFrame(() => {
+            // Update container styles
             this.container.style.fontSize = `${this.fontSize}px`;
-            this.resolutionDisplay.textContent = `${this.width} x ${this.height}`;
-            this.cellularGrid = null;
+            this.container.style.lineHeight = `${this.fontSize}px`;
             
-            // Update matrix columns with new dimensions
-            this.matrixColumns = Array(this.width).fill().map((_, i) => ({
-                drops: Array(3).fill().map(() => ({
-                    y: -Math.random() * 30,
-                    progress: Math.random(),
-                    headChar: this.charSets[this.currentCharSet].chars[0],
-                    trail: Array(MATRIX_CONFIG.MAX_TRAIL_LENGTH).fill().map(() => 
-                        this.charSets[this.currentCharSet].chars[1]
-                    )
-                })),
-                lastDrop: performance.now() - i * 10
-            }));
+            // Update resolution display
+            this.resolutionDisplay.textContent = `${this.width} x ${this.height}`;
+            
+            // Reset pattern-specific data
+            this.resetPatternData();
         });
+    }
+
+    resetPatternData() {
+        switch(this.modes[this.currentMode]) {
+            case 'Cellular':
+                this.cellularGrid = null;
+                break;
+            case 'Matrix':
+                this.matrixColumns = null;
+                this.firstMatrixFrame = true;
+                break;
+            case 'Camera':
+                if (!this.isCameraInitialized) {
+                    this.initializeCamera();
+                }
+                break;
+            // Add other pattern resets as needed
+        }
+    }
+
+    createMatrixColumns() {
+        const headChars = this.charSets[this.currentCharSet].chars.length > 1 ? 
+            this.charSets[this.currentCharSet].chars : MATRIX_CONFIG.HEAD_CHARS;
+        const trailChars = this.charSets[this.currentCharSet].chars.length > 1 ? 
+            this.charSets[this.currentCharSet].chars : MATRIX_CONFIG.TRAIL_CHARS;
+
+        return Array(this.width).fill().map((_, i) => ({
+            drops: Array(3).fill().map(() => ({
+                y: -Math.random() * 30,
+                progress: Math.random(),
+                headChar: headChars[Math.floor(Math.random() * headChars.length)],
+                trail: Array(MATRIX_CONFIG.MAX_TRAIL_LENGTH).fill().map(() => 
+                    trailChars[Math.floor(Math.random() * trailChars.length)]
+                )
+            })),
+            lastDrop: performance.now() - i * 10
+        }));
     }
 
     initMatrix() {
@@ -114,7 +153,11 @@ class ASCIIEffect {
             matrixConfig: MATRIX_CONFIG,
             ripples: this.ripples,
             cellularGrid: this.cellularGrid,
-            isBinary: this.charSets[this.currentCharSet].name === 'Binary'
+            isBinary: this.charSets[this.currentCharSet].name === 'Binary',
+            firstMatrixFrame: this.firstMatrixFrame,
+            videoElement: this.videoElement,
+            canvas: this.canvas,
+            canvasCtx: this.canvasCtx
         };
         
         // Update click intensity decay
@@ -135,12 +178,25 @@ class ASCIIEffect {
             case 'Interference': generateInterferencePattern(context, time); break;
             case 'Psychedelic': generatePsychedelicPattern(context, time); break;
             case 'Cellular': {
-                const result = generateCellularPattern({
-                    ...context,
-                    cellularGrid: this.cellularGrid
+                const { newGrid, newMatrix } = generateCellularPattern({
+                    matrix: this.matrix,
+                    width: this.width,
+                    height: this.height,
+                    chars: this.charSets[this.currentCharSet].chars,
+                    cellularGrid: this.cellularGrid,
+                    speed: this.speed,
+                    mouseX: this.mouseX,
+                    mouseY: this.mouseY,
+                    isMouseDown: this.isMouseDown,
+                    lastClickTime: this.lastClickTime,
+                    cellularDensity: this.cellularDensity,
+                    cellularIterations: this.cellularIterations,
+                    cellularThreshold: this.cellularThreshold,
+                    cellularSmoothing: this.cellularSmoothing,
+                    isBinary: this.charSets[this.currentCharSet].chars.length === 2 && this.charSets[this.currentCharSet].chars.includes('0') && this.charSets[this.currentCharSet].chars.includes('1')
                 });
-                this.cellularGrid = result.newGrid;
-                this.matrix = result.newMatrix;
+                this.cellularGrid = newGrid;
+                this.matrix = newMatrix;
                 break;
             }
             case 'Shockwave': generateShockwavePattern(context, time); break;
@@ -151,6 +207,17 @@ class ASCIIEffect {
                 if (newMatrix) this.matrix = newMatrix;
                 break;
             }
+            case 'Matrix': 
+                generateMatrixPattern(context, time); 
+                break;
+            case 'Camera': 
+                generateCameraPattern(context, time); 
+                break;
+        }
+        
+        // Reset firstMatrixFrame after first frame
+        if (this.firstMatrixFrame) {
+            this.firstMatrixFrame = false;
         }
     }
 
@@ -223,8 +290,14 @@ class ASCIIEffect {
     animate(currentTime = 0) {
         this.updateFPS(currentTime);
         
-        if (!['Matrix', 'Cellular'].includes(this.modes[this.currentMode])) {
+        // Ensure matrix is properly initialized
+        if (!this.matrix || this.matrix.length !== this.height || 
+            this.matrix[0].length !== this.width) {
             this.initMatrix();
+        }
+        
+        if (this.modes[this.currentMode] === 'Matrix' && !this.matrixColumns) {
+            this.matrixColumns = this.createMatrixColumns();
         }
         
         this.generatePattern();
@@ -241,7 +314,23 @@ class ASCIIEffect {
     }
 
     setCharSize(newSize) {
-        this.charSize = Math.min(Math.max(newSize, 8), this.maxCharSize);
+        this.charSize = Math.max(12, newSize);
         this.updateDimensions();
+    }
+
+    async initializeCamera() {
+        try {
+            this.videoElement = document.createElement('video');
+            this.canvas = document.createElement('canvas');
+            this.canvasCtx = this.canvas.getContext('2d');
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            this.videoElement.srcObject = stream;
+            await this.videoElement.play();
+            this.isCameraInitialized = true;
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            alert('Camera access failed. Please ensure you have granted camera permissions.');
+        }
     }
 } 

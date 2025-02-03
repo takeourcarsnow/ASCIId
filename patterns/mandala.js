@@ -11,17 +11,20 @@ function generateMandalaPattern(context, time) {
             const distance = Math.sqrt(dx * dx + dy * dy);
             const angle = Math.atan2(dy, dx) * symmetry;
             
-            // Add multiple layered patterns
+            // Inverted pattern calculation
             const mandala = 
-                Math.sin(angle + distance * 0.2 + time) * 
-                Math.cos(distance * 0.1 - time * 0.5) *
-                Math.sin(angle * 2 + time * 0.3);
+                1 - ( // Inversion happens here
+                    Math.sin(angle + distance * 0.2 + time) * 
+                    Math.cos(distance * 0.1 - time * 0.5) *
+                    Math.sin(angle * 2 + time * 0.3)
+                );
             
-            // Add radial gradient
-            const radialFade = 1 - Math.min(distance / (width/2), 1);
-            const charIndex = Math.floor((mandala + 1) * radialFade * (chars.length / 2));
+            // Enhanced contrast radial gradient
+            const radialFade = Math.pow(1 - Math.min(distance / (width/2), 1), 2);
+            const charIndex = Math.floor(mandala * radialFade * (chars.length - 1));
             
-            matrix[i][j] = chars[Math.abs(charIndex % chars.length)];
+            // Reverse character selection for better inversion effect
+            matrix[i][j] = chars[chars.length - 1 - Math.abs(charIndex % chars.length)];
         }
     }
 } 

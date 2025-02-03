@@ -114,21 +114,52 @@ function setupEventHandlers(effect) {
 
     // Sliders
     document.getElementById('speed').oninput = (e) => {
-        effect.speed = parseInt(e.target.value);
-        document.querySelector('.speed-value').textContent = effect.speed;
+        // Convert linear value (1-100) to logarithmic scale (0.1-100)
+        const minLog = Math.log(0.1);
+        const maxLog = Math.log(100);
+        const logRange = maxLog - minLog;
+        const linearValue = parseInt(e.target.value);
+        const logValue = Math.exp(minLog + (logRange * (linearValue / 100)));
+        
+        effect.speed = logValue;
+        document.querySelector('.speed-value').textContent = logValue.toFixed(1);
     };
 
-    document.querySelector('.char-size-control').addEventListener('input', (e) => {
-        const newSize = parseInt(e.target.value, 10);
+    document.getElementById('char-size').addEventListener('input', (e) => {
+        const newSize = Math.max(12, parseInt(e.target.value, 10));
         effect.setCharSize(newSize);
         document.querySelector('.char-size-value').textContent = newSize;
     });
 
     document.getElementById('cellular-density').oninput = (e) => {
         effect.cellularDensity = parseFloat(e.target.value);
-        document.querySelector('.cellular-density-value').textContent = effect.cellularDensity.toFixed(1);
+        document.querySelector('.cellular-density-value').textContent = effect.cellularDensity.toFixed(3);
         if (effect.modes[effect.currentMode] === 'Cellular') {
             effect.cellularGrid = null; // Reset the grid to apply new density
+        }
+    };
+
+    document.getElementById('cellular-iterations').oninput = (e) => {
+        effect.cellularIterations = parseInt(e.target.value);
+        document.querySelector('.cellular-iterations-value').textContent = effect.cellularIterations;
+        if (effect.modes[effect.currentMode] === 'Cellular') {
+            effect.cellularGrid = null; // Reset the grid to apply new iterations
+        }
+    };
+
+    document.getElementById('cellular-threshold').oninput = (e) => {
+        effect.cellularThreshold = parseFloat(e.target.value);
+        document.querySelector('.cellular-threshold-value').textContent = effect.cellularThreshold.toFixed(1);
+        if (effect.modes[effect.currentMode] === 'Cellular') {
+            effect.cellularGrid = null; // Reset the grid to apply new threshold
+        }
+    };
+
+    document.getElementById('cellular-smoothing').oninput = (e) => {
+        effect.cellularSmoothing = parseFloat(e.target.value);
+        document.querySelector('.cellular-smoothing-value').textContent = effect.cellularSmoothing.toFixed(1);
+        if (effect.modes[effect.currentMode] === 'Cellular') {
+            effect.cellularGrid = null; // Reset the grid to apply new smoothing
         }
     };
 

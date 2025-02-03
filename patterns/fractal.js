@@ -17,8 +17,10 @@ function generateFractalPattern(context, time) {
                 iteration++;
             }
             
-            // Map iterations to character index
-            const charIndex = Math.floor((iteration / maxIterations) * (chars.length - 1));
+            // Inverted iteration mapping
+            const invertedIteration = maxIterations - iteration;
+            const charIndex = Math.floor((invertedIteration / maxIterations) * (chars.length - 1));
+            
             matrix[i][j] = chars[charIndex] || chars[0];
         }
     }
