@@ -16,18 +16,35 @@
     </div>
 
     <div class="hide-menu-button">
-        <button id="toggle-menu" class="glow-button">Hide Menus</button>
+        <button id="toggle-menu" class="glow-button hide-menu-button" 
+                aria-label="Toggle menu visibility"
+                title="Toggle Menu Visibility (M)">
+            &#128065; <!-- Open eye emoji -->
+        </button>
     </div>
 
     <div class="controls">
         <div class="control-panel">
-            <select id="mode-selector" class="glow-dropdown">
-                <!-- Options will be populated by JavaScript -->
-            </select>
-            
-            <select id="char-selector" class="glow-dropdown">
-                <!-- Options will be populated by JavaScript -->
-            </select>
+            <div class="dropdown-container">
+                <div class="dropdown-controls">
+                    <button id="prev-mode" class="arrow-btn" aria-label="Previous mode">◄</button>
+                    <div class="glow-dropdown-wrapper">
+                        <select id="mode-selector" class="glow-dropdown" aria-label="Select mode">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    <button id="next-mode" class="arrow-btn" aria-label="Next mode">►</button>
+                </div>
+                <div class="dropdown-controls">
+                    <button id="prev-char" class="arrow-btn" aria-label="Previous character set">◄</button>
+                    <div class="glow-dropdown-wrapper">
+                        <select id="char-selector" class="glow-dropdown" aria-label="Select character set">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    <button id="next-char" class="arrow-btn" aria-label="Next character set">►</button>
+                </div>
+            </div>
 
             <div class="slider-container">
                 <label for="speed">Speed</label>
@@ -45,12 +62,6 @@
                 <label for="cellular-density">Density</label>
                 <input type="range" id="cellular-density" min="0.1" max="0.9" step="0.1" value="0.5">
                 <span class="cellular-density-value">0.5</span>
-            </div>
-
-            <div class="slider-container">
-                <label for="cellular-speed">Speed</label>
-                <input type="range" id="cellular-speed" min="1" max="100" value="50">
-                <span class="cellular-speed-value">50</span>
             </div>
 
             <button id="random-color" class="control-btn" 
@@ -76,10 +87,6 @@
     <div class="mode-info">
         <div class="shortcuts">
             <div class="shortcut">
-                <kbd>Space</kbd>
-                <span>Auto Mode</span>
-            </div>
-            <div class="shortcut">
                 <kbd>M</kbd>
                 <span>Change Mode</span>
             </div>
@@ -90,10 +97,6 @@
             <div class="shortcut">
                 <kbd>T</kbd>
                 <span>Change Theme</span>
-            </div>
-            <div class="shortcut">
-                <kbd>R</kbd>
-                <span>Reset</span>
             </div>
         </div>
     </div>

@@ -1,7 +1,7 @@
 function generateFractalPattern(context, time) {
     const { matrix, width, height, chars } = context;
     const maxIterations = 30;
-    const zoom = 1.0 / (1.0 + time * 0.001);
+    const zoom = 1.0 / (1.0 + time * 0.01);
     
     for (let i = 0; i < height; i++) {
         for (let j = 0; j < width; j++) {

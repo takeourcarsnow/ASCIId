@@ -1,3 +1,22 @@
+const handleModeChange = (effect, direction) => {
+    const currentIndex = effect.currentMode;
+    const newIndex = (currentIndex + direction + effect.modes.length) % effect.modes.length;
+    effect.setMode(newIndex);
+};
+
+const handleCharSetChange = (effect, direction) => {
+    const currentIndex = effect.currentCharSet;
+    const newIndex = (currentIndex + direction + effect.charSets.length) % effect.charSets.length;
+    effect.currentCharSet = newIndex;
+    effect.cycleChar();
+    
+    // Update the dropdown menu
+    const charSelector = document.getElementById('char-selector');
+    if (charSelector) {
+        charSelector.selectedIndex = newIndex;
+    }
+};
+
 function setupEventHandlers(effect) {
     // Mouse events
     effect.container.addEventListener('mousemove', (e) => {
@@ -68,11 +87,6 @@ function setupEventHandlers(effect) {
         }
     };
 
-    document.getElementById('cellular-speed').oninput = (e) => {
-        effect.speed = parseInt(e.target.value);
-        document.querySelector('.cellular-speed-value').textContent = effect.speed;
-    };
-
     // Color pickers
     document.getElementById('primary-color').oninput = (e) => {
         document.documentElement.style.setProperty('--primary-color', e.target.value);
@@ -86,21 +100,15 @@ function setupEventHandlers(effect) {
     // Keyboard shortcuts
     window.addEventListener('keydown', (e) => {
         switch(e.code) {
-            case 'Space':
-                e.preventDefault();
-                effect.toggleAutoMode();
-                break;
             case 'KeyM':
                 effect.setMode((effect.currentMode + 1) % effect.modes.length);
                 break;
             case 'KeyC':
                 effect.cycleChar();
+                document.getElementById('char-selector').value = effect.currentCharSet;
                 break;
             case 'KeyT':
                 effect.cycleTheme();
-                break;
-            case 'KeyR':
-                effect.reset();
                 break;
         }
     });
@@ -127,12 +135,11 @@ function setupEventHandlers(effect) {
         effect.container.classList.toggle('random-color');
     };
 
-    // Add to existing keydown handler
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'r' || e.key === 'R') {
-            document.getElementById('random-color').click();
-        }
-    });
+    // Add arrow controls
+    document.getElementById('prev-mode').onclick = () => handleModeChange(effect, -1);
+    document.getElementById('next-mode').onclick = () => handleModeChange(effect, 1);
+    document.getElementById('prev-char').onclick = () => handleCharSetChange(effect, -1);
+    document.getElementById('next-char').onclick = () => handleCharSetChange(effect, 1);
 }
 
 // Add this function to handle menu toggling
@@ -148,6 +155,14 @@ function setupMenuToggle(effect) {
         elementsToHide.forEach(element => {
             element.classList.toggle('hidden');
         });
-        toggleButton.textContent = toggleButton.textContent === 'Hide Menus' ? 'Show Menus' : 'Hide Menus';
+        toggleButton.innerHTML = toggleButton.innerHTML === '&#128065;' ? '&#128308;' : '&#128065;';
+        
+        // Add this to ensure controls are visible when toggled
+        if (!document.querySelector('.controls').classList.contains('hidden')) {
+            document.querySelector('.controls').scrollIntoView({ 
+                behavior: 'auto',
+                block: 'center'
+            });
+        }
     });
 } 

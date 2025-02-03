@@ -20,7 +20,7 @@ class ASCIIEffect {
         this.modes = MODES;
         this.charSets = CHAR_SETS;
         this.currentCharSet = 0;
-        this.currentMode = 9;
+        this.currentMode = 8;
         this.autoMode = false;
         this.frame = 0;
         this.lastTime = 0;
@@ -65,20 +65,26 @@ class ASCIIEffect {
         this.charWidth = this.fontSize * 0.6;
         this.width = Math.floor(window.innerWidth / this.charWidth);
         this.height = Math.floor(window.innerHeight / this.fontSize);
-        this.container.style.fontSize = `${this.fontSize}px`;
-        this.resolutionDisplay.textContent = `${this.width} x ${this.height}`;
-        this.cellularGrid = null;
-        this.matrixColumns = Array(this.width).fill().map((_, i) => ({
-            drops: Array(3).fill().map(() => ({
-                y: -Math.random() * 30,
-                progress: Math.random(),
-                headChar: this.charSets[this.currentCharSet].chars[0],
-                trail: Array(MATRIX_CONFIG.MAX_TRAIL_LENGTH).fill().map(() => 
-                    this.charSets[this.currentCharSet].chars[1]
-                )
-            })),
-            lastDrop: performance.now() - i * 10
-        }));
+        
+        // Add this to prevent layout shifts
+        requestAnimationFrame(() => {
+            this.container.style.fontSize = `${this.fontSize}px`;
+            this.resolutionDisplay.textContent = `${this.width} x ${this.height}`;
+            this.cellularGrid = null;
+            
+            // Update matrix columns with new dimensions
+            this.matrixColumns = Array(this.width).fill().map((_, i) => ({
+                drops: Array(3).fill().map(() => ({
+                    y: -Math.random() * 30,
+                    progress: Math.random(),
+                    headChar: this.charSets[this.currentCharSet].chars[0],
+                    trail: Array(MATRIX_CONFIG.MAX_TRAIL_LENGTH).fill().map(() => 
+                        this.charSets[this.currentCharSet].chars[1]
+                    )
+                })),
+                lastDrop: performance.now() - i * 10
+            }));
+        });
     }
 
     initMatrix() {
