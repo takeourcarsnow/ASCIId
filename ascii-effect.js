@@ -14,6 +14,10 @@ class ASCIIEffect {
         this.resolutionDisplay = document.querySelector('.resolution');
         this.modeDisplay = document.querySelector('.mode-display');
         this.modeNameDisplay = document.querySelector('.mode-name');
+        
+        // Initialize default dimensions
+        this.fontSize = 20;
+        this.charWidth = this.fontSize * 0.6;
     }
 
     setupConfig() {
@@ -39,7 +43,9 @@ class ASCIIEffect {
         this.lastClickTime = 0;
         this.clickIntensity = 0;
         this.ripples = [];
-        this.cellularDensity = 0.5; // Default density for cellular mode
+        this.cellularDensity = 0.5;
+        
+        // Update dimensions before initializing matrix
         this.updateDimensions();
         this.initMatrix();
     }
@@ -61,34 +67,31 @@ class ASCIIEffect {
     }
 
     updateDimensions() {
-        this.fontSize = this.charSize;
-        this.charWidth = this.fontSize * 0.6;
-        this.width = Math.floor(window.innerWidth / this.charWidth);
-        this.height = Math.floor(window.innerHeight / this.fontSize);
+        // Ensure minimum dimensions
+        const minWidth = 10;
+        const minHeight = 10;
         
-        // Add this to prevent layout shifts
-        requestAnimationFrame(() => {
-            this.container.style.fontSize = `${this.fontSize}px`;
-            this.resolutionDisplay.textContent = `${this.width} x ${this.height}`;
-            this.cellularGrid = null;
-            
-            // Update matrix columns with new dimensions
-            this.matrixColumns = Array(this.width).fill().map((_, i) => ({
-                drops: Array(3).fill().map(() => ({
-                    y: -Math.random() * 30,
-                    progress: Math.random(),
-                    headChar: this.charSets[this.currentCharSet].chars[0],
-                    trail: Array(MATRIX_CONFIG.MAX_TRAIL_LENGTH).fill().map(() => 
-                        this.charSets[this.currentCharSet].chars[1]
-                    )
-                })),
-                lastDrop: performance.now() - i * 10
-            }));
-        });
+        // Calculate new dimensions
+        const width = Math.max(minWidth, Math.floor(this.container.clientWidth / this.charWidth));
+        const height = Math.max(minHeight, Math.floor(this.container.clientHeight / this.fontSize));
+        
+        // Update dimensions
+        this.width = width;
+        this.height = height;
+        
+        // Center the content
+        this.container.style.display = 'flex';
+        this.container.style.justifyContent = 'center';
+        this.container.style.alignItems = 'center';
     }
 
     initMatrix() {
-        this.matrix = Array(this.height).fill().map(() => Array(this.width).fill(' '));
+        // Ensure valid dimensions
+        if (this.width > 0 && this.height > 0) {
+            this.matrix = Array(this.height).fill().map(() => Array(this.width).fill(' '));
+        } else {
+            console.error('Invalid dimensions:', this.width, this.height);
+        }
     }
 
     addRipple(x, y) {
@@ -236,7 +239,28 @@ class ASCIIEffect {
     }
 
     setCharSize(newSize) {
-        this.charSize = Math.min(Math.max(newSize, 8), this.maxCharSize);
+        // Store previous center position
+        const rect = this.container.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        // Update font size
+        this.fontSize = newSize;
+        this.charWidth = this.fontSize * 0.6;
+        this.container.style.fontSize = `${this.fontSize}px`;
+        
+        // Update dimensions with new size
         this.updateDimensions();
+        
+        // Calculate new center position
+        const newRect = this.container.getBoundingClientRect();
+        const newCenterX = newRect.left + newRect.width / 2;
+        const newCenterY = newRect.top + newRect.height / 2;
+        
+        // Adjust scroll position to maintain center
+        window.scrollBy(
+            (centerX - newCenterX),
+            (centerY - newCenterY)
+        );
     }
 } 
