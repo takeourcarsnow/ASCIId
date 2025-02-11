@@ -5,14 +5,6 @@ class ASCIIEffect {
         this.initializeDropdown();
         this.initializeCharSelector();
         setupEventHandlers(this);
-        
-        // Performance optimizations
-        this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        this.frameSkip = this.isMobile ? 2 : 1;
-        this.lastRenderTime = 0;
-        this.minRenderInterval = this.isMobile ? 50 : 16;
-        
-        // Start animation loop
         this.animate();
     }
 
@@ -35,8 +27,8 @@ class ASCIIEffect {
         this.fps = 0;
         this.frameCount = 0;
         this.lastFpsUpdate = 0;
-        this.speed = 10; // Changed from 20 to 10
-        this.charSize = 20;
+        this.speed = 10;
+        this.charSize = 30;
         this.maxCharSize = 50;
         this.rippleStrength = 1;
         this.noiseScale = 0.05;
@@ -74,25 +66,23 @@ class ASCIIEffect {
     }
 
     updateDimensions() {
-        const scale = this.isMobile ? 2 : 1;
         this.fontSize = this.charSize;
-        this.charWidth = this.charSize * 0.6;
+        this.charWidth = this.fontSize * 0.6;
+        this.width = Math.floor(window.innerWidth / this.charWidth);
+        this.height = Math.floor(window.innerHeight / this.fontSize);
         
-        // Calculate dimensions based on container size
-        const containerWidth = window.innerWidth;
-        const containerHeight = window.innerHeight;
-        
-        // Calculate number of columns and rows
-        this.width = Math.ceil(containerWidth / (this.charWidth * scale));
-        this.height = Math.ceil(containerHeight / (this.fontSize * scale));
-        
-        // Update container style
-        this.container.style.fontSize = `${this.fontSize}px`;
-        this.container.style.lineHeight = `${this.fontSize}px`;
-        this.container.style.width = '100vw';
-        this.container.style.height = '100vh';
-        
-        this.initMatrix();
+        // Batch updates to prevent layout thrashing
+        requestAnimationFrame(() => {
+            // Update container styles
+            this.container.style.fontSize = `${this.fontSize}px`;
+            this.container.style.lineHeight = `${this.fontSize}px`;
+            
+            // Update resolution display
+            this.resolutionDisplay.textContent = `${this.width} x ${this.height}`;
+            
+            // Reset pattern-specific data
+            this.resetPatternData();
+        });
     }
 
     resetPatternData() {
@@ -284,76 +274,40 @@ class ASCIIEffect {
     }
 
     animate(currentTime = 0) {
-        // Handle frame skipping for mobile
-        if (this.frameSkip > 1 && this.frame % this.frameSkip !== 0) {
-            this.frame++;
-            requestAnimationFrame(time => this.animate(time));
-            return;
-        }
-
-        // Throttle frame rate on mobile
-        const deltaTime = currentTime - this.lastRenderTime;
-        if (deltaTime < this.minRenderInterval) {
-            requestAnimationFrame(time => this.animate(time));
-            return;
-        }
-
-        this.lastRenderTime = currentTime;
-        
-        // Update FPS
         this.updateFPS(currentTime);
-
-        // Initialize matrix if needed
+        
+        // Ensure matrix is properly initialized
         if (!this.matrix || this.matrix.length !== this.height || 
             this.matrix[0].length !== this.width) {
             this.initMatrix();
         }
-
-        // Initialize matrix columns for Matrix effect
+        
         if (this.modes[this.currentMode] === 'Matrix' && !this.matrixColumns) {
             this.matrixColumns = this.createMatrixColumns();
         }
-
-        // Generate the pattern
+        
         this.generatePattern();
-
-        // Efficient string concatenation
-        const lines = new Array(this.height);
-        for (let i = 0; i < this.height; i++) {
-            lines[i] = this.matrix[i].join('');
+        
+        // Before the buffer creation
+        if (this.modes[this.currentMode] === 'Matrix') {
+            this.container.style.willChange = 'contents';
+        } else {
+            this.container.style.willChange = 'auto';
         }
         
-        // Single DOM update
-        this.container.textContent = lines.join('\n');
-
-        // Update resolution display less frequently
-        if (this.frame % 30 === 0) {
-            this.resolutionDisplay.textContent = `${this.width} x ${this.height}`;
+        // Replace the buffer loop with more efficient concatenation
+        const lineArrays = [];
+        for (let i = 0; i < this.height; i++) {
+            lineArrays.push(this.matrix[i].join(''));
         }
-
+        this.container.textContent = lineArrays.join('\n');
+        
         this.frame++;
         requestAnimationFrame(time => this.animate(time));
     }
 
     setCharSize(newSize) {
-        this.charSize = Math.max(12, Math.min(newSize, this.maxCharSize));
-        this.fontSize = this.charSize;
-        this.charWidth = this.charSize * 0.6;
-        
-        // Update container style
-        this.container.style.fontSize = `${this.fontSize}px`;
-        this.container.style.lineHeight = `${this.fontSize}px`;
-        
-        // Recalculate dimensions
+        this.charSize = Math.max(12, newSize);
         this.updateDimensions();
-        
-        // Reset pattern-specific data
-        if (this.modes[this.currentMode] === 'Matrix') {
-            this.matrixColumns = null;
-            this.firstMatrixFrame = true;
-        }
-        if (this.modes[this.currentMode] === 'Cellular') {
-            this.cellularGrid = null;
-        }
     }
 }
