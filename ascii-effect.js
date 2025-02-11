@@ -70,17 +70,18 @@ class ASCIIEffect {
         this.charWidth = this.fontSize * 0.6;
         this.width = Math.floor(window.innerWidth / this.charWidth);
         this.height = Math.floor(window.innerHeight / this.fontSize);
-        
-        // Batch updates to prevent layout thrashing
         requestAnimationFrame(() => {
-            // Update container styles
+            // Use viewport units for desktop, fixed pixels for mobile
+            if (window.innerWidth > 768) { // threshold for desktop
+                this.container.style.width = '100vw';
+                this.container.style.height = '100vh';
+            } else {
+                this.container.style.width = window.innerWidth + 'px';
+                this.container.style.height = window.innerHeight + 'px';
+            }
             this.container.style.fontSize = `${this.fontSize}px`;
             this.container.style.lineHeight = `${this.fontSize}px`;
-            
-            // Update resolution display
             this.resolutionDisplay.textContent = `${this.width} x ${this.height}`;
-            
-            // Reset pattern-specific data
             this.resetPatternData();
         });
     }

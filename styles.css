@@ -23,10 +23,6 @@ body {
     overflow: hidden;
     height: 100vh;
     position: relative;
-    margin: 0;
-    padding: 0;
-    width: 100vw;
-    height: 100vh;
 }
 
 #ascii-container {
@@ -48,11 +44,6 @@ body {
     left: 0;
     overflow: hidden;
     contain: strict;
-    transform: translateZ(0);
-    will-change: contents;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
 }
 
 /* Stats Display */
