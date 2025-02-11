@@ -15,8 +15,16 @@ const handleModeChange = (effect, direction) => {
 const handleCharSetChange = (effect, direction) => {
     const currentIndex = effect.currentCharSet;
     const newIndex = (currentIndex + direction + effect.charSets.length) % effect.charSets.length;
+    
+    // Update the character set and reset pattern if needed
     effect.currentCharSet = newIndex;
-    effect.cycleChar();
+    if (effect.modes[effect.currentMode] === 'Cellular') {
+        effect.cellularGrid = null;
+    }
+    if (effect.modes[effect.currentMode] === 'Matrix') {
+        effect.matrixColumns = null;
+        effect.firstMatrixFrame = true;
+    }
     
     // Update the dropdown menu
     const charSelector = document.getElementById('char-selector');
@@ -110,7 +118,7 @@ function setupEventHandlers(effect) {
             effect.isMouseDown = true;
             effect.lastClickTime = performance.now();
         }
-    });
+    }, { passive: true });
 
     effect.container.addEventListener('touchmove', (e) => {
         e.preventDefault();
@@ -159,13 +167,13 @@ function setupEventHandlers(effect) {
             }
             this.lastTouchX = currentX;
         }
-    });
+    }, { passive: true });
 
     effect.container.addEventListener('touchend', () => {
         // Reset zoom tracking
         initialDistance = null;
         effect.isMouseDown = false;
-    });
+    }, { passive: true });
 
     // Control events
     document.getElementById('mode-selector').onchange = (e) => effect.setMode(e.target.selectedIndex);
@@ -255,10 +263,15 @@ function setupEventHandlers(effect) {
     });
 
     // Window resize
+    let resizeTimeout;
     window.addEventListener('resize', () => {
-        effect.updateDimensions();
-        effect.initMatrix();
-    });
+        if (resizeTimeout) {
+            clearTimeout(resizeTimeout);
+        }
+        resizeTimeout = setTimeout(() => {
+            effect.updateDimensions();
+        }, 250);
+    }, { passive: true });
 
     // Add this function to handle menu toggling
     setupMenuToggle(effect);
@@ -323,4 +336,4 @@ function setupMenuToggle(effect) {
             });
         }
     };
-} 
+}
