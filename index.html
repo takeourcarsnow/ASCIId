@@ -2,206 +2,1176 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>ASCII Raymarcher • Optimized</title>
-<link rel="stylesheet" href="css/style.css">
-</head>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#0b0b0f" />
+<title>ASCII Raymarcher • Mobile-Optimized</title>
 <style>
-  /* Modular panel toggle: hide panel when not .open */
-  #panel { display: block; transition: max-height 0.2s; }
-  #panel:not(.open) { display: none; }
+  :root{
+    --bg: #0b0b0f;
+    --bg-panel: #121218;
+    --bg-panel-2: #16161f;
+    --text: #e8e8ef;
+    --muted: #b7b7c9;
+    --accent: #7dcfff;
+    --accent-2:#c099ff;
+    --good:#3bd671;
+    --bad:#ff6b6b;
+    --shadow: rgba(0,0,0,0.25);
+    --border: #232336;
+    --pill:#1e1e2e;
+    --radius: 12px;
+    --tap: 44px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f7f8fb; --bg-panel:#fff; --bg-panel-2:#f3f3f9;
+      --text:#1b1b22; --muted:#58586b; --accent:#0b6cff; --accent-2:#8845ff;
+      --border:#e1e3ef; --pill:#eef0fb; --shadow:rgba(0,0,0,0.08);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font: 14px/1.25 Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+
+  /* Layout */
+  #app{display:flex; flex-direction:column; height:100vh; padding-top: env(safe-area-inset-top);}
+
+  /* Topbar */
+  #topbar{
+    position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:.5rem;
+    height:56px; padding:0 12px; background:linear-gradient(180deg, rgba(0,0,0,0.25), transparent), var(--bg);
+    border-bottom:1px solid var(--border);
+    backdrop-filter:saturate(1.2) blur(8px);
+  }
+  #title{font-weight:700; letter-spacing:.3px}
+  .spacer{flex:1}
+  .pill{display:inline-flex; align-items:center; gap:.5ch; padding:.2rem .6rem; border-radius:999rem; background:var(--pill); color:var(--muted)}
+  .tiny{font-size:12px; opacity:.85}
+  #fps{font-variant-numeric: tabular-nums; opacity:.85}
+
+  button{
+    -webkit-tap-highlight-color: transparent;
+    display:inline-flex; align-items:center; justify-content:center;
+    height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border);
+    background:linear-gradient(180deg, var(--bg-panel), var(--bg-panel-2));
+    color:var(--text); box-shadow:0 1px 0 var(--shadow);
+    font-weight:600; cursor:pointer;
+  }
+  button:active{transform:translateY(1px)}
+  button.primary{background:linear-gradient(180deg, #1a1b26, #141521); border-color:#26283d}
+  #mobileTip{display:none}
+  @media (max-width: 860px){ #mobileTip{display:inline} }
+
+  /* Main content */
+  #main{
+    display:grid; grid-template-columns: 1fr min(360px, 100vw); gap:12px;
+    flex:1; min-height:0; padding:12px;
+  }
+  @media (max-width: 860px){
+    #main{grid-template-columns: 1fr}
+  }
+
+  #viewer{position:relative; width:100%; height:100%; border-radius:var(--radius); overflow:hidden; border:1px solid var(--border); background:#000}
+  #canvas{width:100%; height:100%; display:block; touch-action:none}
+  #hud{
+    position:absolute; left:8px; bottom:8px; background:rgba(0,0,0,0.45); color:#fff;
+    padding:6px 8px; border-radius:8px; backdrop-filter: blur(6px);
+    text-shadow:0 1px 2px rgba(0,0,0,0.8);
+    user-select:none; -webkit-user-select:none; pointer-events:none;
+  }
+
+  /* Panel */
+  #panel{
+    height:100%; border:1px solid var(--border); border-radius:var(--radius);
+    background:linear-gradient(180deg, var(--bg-panel), var(--bg-panel-2));
+    overflow:auto; min-height:0;
+  }
+  @media (max-width: 860px){
+    #panel{ 
+      position:fixed; inset:auto 0 0 0; height:min(70vh, 560px);
+      transform:translateY(105%); transition:transform .24s ease; z-index:20; border-radius:16px 16px 0 0;
+      box-shadow:0 -16px 40px rgba(0,0,0,0.35);
+    }
+    #panel.open{ transform: translateY(0) }
+  }
+  details{ border-top:1px solid var(--border) }
+  details>summary{
+    list-style:none; cursor:pointer; padding:12px 12px; position:sticky; top:0; background:var(--bg-panel);
+    font-weight:700;
+  }
+  details[open]>summary{ box-shadow: inset 0 -1px 0 var(--border) }
+  summary::-webkit-details-marker{display:none}
+  .group{ padding: 12px; display:grid; gap:10px }
+  .row{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+  label{display:flex; flex-direction:column; gap:6px}
+  label.inline{display:inline-flex; flex-direction:row; align-items:center; gap:8px}
+  input[type="text"]{
+    width:100%; height: var(--tap); border-radius:8px; border:1px solid var(--border);
+    padding:0 10px; background:var(--bg); color:var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono","Courier New", monospace;
+  }
+  select, input[type="range"], input[type="checkbox"], input[type="text"]{ accent-color: var(--accent) }
+  input[type="range"]{ width:min(56vw, 320px) }
+  button.block{ width:100% }
+  .hint{ color:var(--muted) }
+
+  /* Floating controls trigger on mobile */
+  #floatingControls{
+    display:none; position:fixed; right:12px; bottom:12px; z-index:30;
+    gap:8px; flex-direction:column;
+  }
+  #floatingControls button{ height:44px; border-radius:12px }
+  @media (max-width: 860px){ #floatingControls{ display:flex } }
+
+  /* Accessibility helpers */
+  @media (prefers-reduced-motion: reduce){
+    *{scroll-behavior:auto; transition:none !important; animation:none !important}
+  }
 </style>
 </head>
-
 <body>
-<!-- Modular templates -->
-<template id="tpl-topbar">
-  <div id="topbar">
-    <span id="title">ASCII Raymarcher</span>
-    <span class="pill tiny">Optimized • TAA • Adaptive • SDF</span>
-    <span class="spacer"></span>
-    <button id="panelBtn" title="Toggle Controls (mobile)">Controls<span id="mobileTip"> ☰</span></button>
-    <button id="fullscreenBtn" title="Fullscreen">Fullscreen</button>
-    <span id="fps">FPS: --</span>
-  </div>
-</template>
+  <div id="app">
+    <div id="topbar">
+      <span id="title">ASCII Raymarcher</span>
+      <span class="pill tiny">Optimized • TAA • Adaptive • SDF</span>
+      <span class="spacer"></span>
+      <button id="panelBtn" title="Toggle Controls (mobile)">Controls<span id="mobileTip"> ☰</span></button>
+      <button id="fullscreenBtn" title="Fullscreen">Fullscreen</button>
+      <span id="fps" class="pill tiny">FPS: --</span>
+    </div>
 
-<template id="tpl-viewer">
-  <div id="viewer">
-    <canvas id="canvas"></canvas>
-    <div id="hud" class="tiny">Drag to orbit • Wheel to zoom • Keys: WASD, QE, R reset</div>
-  </div>
-</template>
+    <div id="main">
+      <div id="viewer">
+        <canvas id="canvas"></canvas>
+        <div id="hud" class="tiny">Drag to orbit • Pinch/Wheel to zoom • Keys: WASD, QE, R reset</div>
+      </div>
 
-<template id="tpl-panel">
-  <div id="panel">
-    <!-- ...existing code... (all the <details> sections for panel) ... -->
-    <details open>
-      <summary>Scene</summary>
-      <div class="group">
-        <label>Shape
-          <select id="shape">
-              <option>Sphere</option>
-              <option>Box</option>
-              <option selected>Torus</option>
-              <option>Octahedron</option>
-              <option>Capsule</option>
-              <option>Cylinder</option>
-              <option>Cone</option>
-              <option>Pyramid</option>
-              <option>Ellipsoid</option>
-              <option>RoundedBox</option>
-              <option>TriPrism</option>
-              <option>HexPrism</option>
-              <option>Plane</option>
-              <option>Cross</option>
-              <option>Tetrahedron</option>
-              <option>Star</option>
-              <option>Heart</option>
-              <option>Egg</option>
-          </select>
-        </label>
-        <label>Size <input id="size" type="range" min="0.2" max="2.5" step="0.01" value="1.1"></label>
-        <div class="row">
-          <span class="tiny" style="width:68px">Rotation</span>
-          <input id="rotX" type="range" min="-180" max="180" step="1" value="20" class="grow">
-        </div>
-        <div class="row">
-          <span class="tiny" style="width:68px"></span>
-          <input id="rotY" type="range" min="-180" max="180" step="1" value="35" class="grow">
-        </div>
-        <div class="row">
-          <span class="tiny" style="width:68px"></span>
-          <input id="rotZ" type="range" min="-180" max="180" step="1" value="0" class="grow">
-        </div>
-        <div class="row">
-          <label class="inline"><input id="autoSpin" type="checkbox" checked> Auto spin</label>
-          <label>Speed <input id="spinSpeed" type="range" min="-3" max="3" step="0.01" value="0.6"></label>
-        </div>
-      </div>
-    </details>
-    <details open>
-      <summary>Lighting</summary>
-      <div class="group">
-        <label>Ambient <input id="ambient" type="range" min="0" max="1" step="0.01" value="0.25"></label>
-        <label>Diffuse <input id="diffuse" type="range" min="0" max="2" step="0.01" value="1.05"></label>
-        <label>Specular <input id="specular" type="range" min="0" max="2" step="0.01" value="0.5"></label>
-        <label>Shininess <input id="shininess" type="range" min="2" max="128" step="1" value="32"></label>
-        <div class="row">
-          <label class="inline"><input id="shadows" type="checkbox" checked> Shadows</label>
-          <label>Softness <input id="shadowK" type="range" min="1" max="24" step="0.1" value="12"></label>
-        </div>
-        <div class="row">
-          <label class="inline"><input id="ao" type="checkbox" checked> AO</label>
-          <label>AO Strength <input id="aoStrength" type="range" min="0" max="2" step="0.01" value="0.9"></label>
-        </div>
-      </div>
-    </details>
-    <details open>
-      <summary>Surface Noise / Animation</summary>
-      <div class="group">
-        <label class="inline"><input id="noiseEnabled" type="checkbox"> Enable noise</label>
-        <label>Amount <input id="noiseAmt" type="range" min="0" max="0.8" step="0.001" value="0.16"></label>
-        <label>Scale <input id="noiseScale" type="range" min="0.2" max="6" step="0.01" value="2.0"></label>
-        <label>Speed <input id="noiseSpeed" type="range" min="0" max="4" step="0.01" value="0.9"></label>
-        <label>Octaves <input id="noiseOct" type="range" min="1" max="6" step="1" value="3"></label>
-      </div>
-    </details>
-    <details open>
-      <summary>ASCII & Color</summary>
-      <div class="group">
-        <label>ASCII preset
-          <select id="asciiPreset">
-            <option value="dense">Dense</option>
-            <option value="classic">Classic</option>
-            <option value="blocks">Blocks</option>
-            <option value="dots">Dots</option>
-            <option value="binary">Binary</option>
-          </select>
-        </label>
-        <label>Characters
-          <input id="asciiChars" type="text" value=" .,'`^:;Il!i~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$">
-        </label>
-        <div class="row">
-          <label class="inline"><input id="invert" type="checkbox"> Invert</label>
-        </div>
-        <div class="row">
-          <label class="inline"><input id="colorEnabled" type="checkbox" checked> Color</label>
-          <label>Gamma <input id="gamma" type="range" min="0.6" max="2.4" step="0.01" value="1.0"></label>
-        </div>
-        <label>Color mode
-          <select id="colorMode">
-            <option value="luma">Luma</option>
-            <option value="depth">Depth</option>
-            <option value="normal">Normal</option>
-            <option value="specular">Specular</option>
-            <option value="momentum">Momentum</option>
-          </select>
-        </label>
-        <label>Palette
-          <select id="palette">
-            <option value="grayscale">Grayscale</option>
-            <option value="fire">Fire</option>
-            <option value="ice">Ice</option>
-            <option value="viridis" selected>Viridis</option>
-            <option value="rainbow">Rainbow</option>
-          </select>
-        </label>
-      </div>
-    </details>
-    <details open>
-      <summary>Render & Performance</summary>
-      <div class="group">
-        <label>Font size <input id="fontSize" type="range" min="8" max="28" step="1" value="14"></label>
-        <label>Resolution <input id="resScale" type="range" min="0.5" max="2" step="0.01" value="1.0"></label>
-        <label>Max steps <input id="maxSteps" type="range" min="16" max="180" step="1" value="72"></label>
-        <label>Max distance <input id="maxDist" type="range" min="8" max="64" step="0.5" value="24"></label>
-        <div class="row">
-          <label class="inline"><input id="taa" type="checkbox" checked> Temporal AA</label>
-          <label>Blend <input id="taaAmt" type="range" min="0" max="0.95" step="0.01" value="0.6"></label>
-        </div>
-        <div class="row">
-          <label class="inline"><input id="adaptive" type="checkbox" checked> Adaptive res</label>
-          <label>Target FPS <input id="targetFps" type="range" min="24" max="90" step="1" value="50"></label>
-        </div>
-        <div class="row">
-          <button id="resetCam">Reset view</button>
-          <button id="resetAll" title="Reset all controls">Reset all</button>
-        </div>
-        <div class="hint tiny">Pro tip: Adaptive res keeps FPS stable; increase Max steps for crisper shadows/edges.</div>
-      </div>
-    </details>
-  </div>
-</template>
+      <div id="panel" class="">
+        <details open>
+          <summary>Scene</summary>
+          <div class="group">
+            <label>Shape
+              <select id="shape">
+                  <option>Sphere</option>
+                  <option>Box</option>
+                  <option selected>Torus</option>
+                  <option>Octahedron</option>
+                  <option>Capsule</option>
+                  <option>Cylinder</option>
+                  <option>Cone</option>
+                  <option>Pyramid</option>
+                  <option>Ellipsoid</option>
+                  <option>RoundedBox</option>
+                  <option>TriPrism</option>
+                  <option>HexPrism</option>
+                  <option>Plane</option>
+                  <option>Cross</option>
+                  <option>Tetrahedron</option>
+                  <option>Star</option>
+                  <option>Heart</option>
+                  <option>Egg</option>
+              </select>
+            </label>
+            <label>Size <input id="size" type="range" min="0.2" max="2.5" step="0.01" value="1.1"></label>
+            <div class="row">
+              <span class="tiny" style="width:68px">Rotation</span>
+              <input id="rotX" type="range" min="-180" max="180" step="1" value="20" class="grow">
+            </div>
+            <div class="row">
+              <span class="tiny" style="width:68px"></span>
+              <input id="rotY" type="range" min="-180" max="180" step="1" value="35" class="grow">
+            </div>
+            <div class="row">
+              <span class="tiny" style="width:68px"></span>
+              <input id="rotZ" type="range" min="-180" max="180" step="1" value="0" class="grow">
+            </div>
+            <div class="row">
+              <label class="inline"><input id="autoSpin" type="checkbox" checked> Auto spin</label>
+              <label>Speed <input id="spinSpeed" type="range" min="-3" max="3" step="0.01" value="0.6"></label>
+            </div>
+          </div>
+        </details>
 
-<div id="app"></div>
+        <details open>
+          <summary>Lighting</summary>
+          <div class="group">
+            <label>Ambient <input id="ambient" type="range" min="0" max="1" step="0.01" value="0.25"></label>
+            <label>Diffuse <input id="diffuse" type="range" min="0" max="2" step="0.01" value="1.05"></label>
+            <label>Specular <input id="specular" type="range" min="0" max="2" step="0.01" value="0.5"></label>
+            <label>Shininess <input id="shininess" type="range" min="2" max="128" step="1" value="32"></label>
+            <div class="row">
+              <label class="inline"><input id="shadows" type="checkbox" checked> Shadows</label>
+              <label>Softness <input id="shadowK" type="range" min="1" max="24" step="0.1" value="12"></label>
+            </div>
+            <div class="row">
+              <label class="inline"><input id="ao" type="checkbox" checked> AO</label>
+              <label>AO Strength <input id="aoStrength" type="range" min="0" max="2" step="0.01" value="0.9"></label>
+            </div>
+          </div>
+        </details>
+
+        <details open>
+          <summary>Surface Noise / Animation</summary>
+          <div class="group">
+            <label class="inline"><input id="noiseEnabled" type="checkbox"> Enable noise</label>
+            <label>Amount <input id="noiseAmt" type="range" min="0" max="0.8" step="0.001" value="0.16"></label>
+            <label>Scale <input id="noiseScale" type="range" min="0.2" max="6" step="0.01" value="2.0"></label>
+            <label>Speed <input id="noiseSpeed" type="range" min="0" max="4" step="0.01" value="0.9"></label>
+            <label>Octaves <input id="noiseOct" type="range" min="1" max="6" step="1" value="3"></label>
+          </div>
+        </details>
+
+        <details open>
+          <summary>ASCII & Color</summary>
+          <div class="group">
+            <label>ASCII preset
+              <select id="asciiPreset">
+                <option value="dense">Dense</option>
+                <option value="classic">Classic</option>
+                <option value="blocks">Blocks</option>
+                <option value="dots">Dots</option>
+                <option value="binary">Binary</option>
+              </select>
+            </label>
+            <label>Characters
+              <input id="asciiChars" type="text" value=" .,'`^:;Il!i~+_-?][}{1)(|\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$">
+            </label>
+            <div class="row">
+              <label class="inline"><input id="invert" type="checkbox"> Invert</label>
+            </div>
+            <div class="row">
+              <label class="inline"><input id="colorEnabled" type="checkbox" checked> Color</label>
+              <label>Gamma <input id="gamma" type="range" min="0.6" max="2.4" step="0.01" value="1.0"></label>
+            </div>
+            <label>Color mode
+              <select id="colorMode">
+                <option value="luma" selected>Luma</option>
+                <option value="depth">Depth</option>
+                <option value="normal">Normal</option>
+                <option value="specular">Specular</option>
+                <option value="momentum">Momentum</option>
+              </select>
+            </label>
+            <label>Palette
+              <select id="palette">
+                <option value="grayscale">Grayscale</option>
+                <option value="fire">Fire</option>
+                <option value="ice">Ice</option>
+                <option value="viridis" selected>Viridis</option>
+                <option value="rainbow">Rainbow</option>
+              </select>
+            </label>
+          </div>
+        </details>
+
+        <details open>
+          <summary>Render & Performance</summary>
+          <div class="group">
+            <label>Font size <input id="fontSize" type="range" min="8" max="28" step="1" value="14"></label>
+            <label>Resolution <input id="resScale" type="range" min="0.5" max="2" step="0.01" value="1.0"></label>
+            <label>Max steps <input id="maxSteps" type="range" min="16" max="180" step="1" value="72"></label>
+            <label>Max distance <input id="maxDist" type="range" min="8" max="64" step="0.5" value="24"></label>
+            <div class="row">
+              <label class="inline"><input id="taa" type="checkbox" checked> Temporal AA</label>
+              <label>Blend <input id="taaAmt" type="range" min="0" max="0.95" step="0.01" value="0.6"></label>
+            </div>
+            <div class="row">
+              <label class="inline"><input id="adaptive" type="checkbox" checked> Adaptive res</label>
+              <label>Target FPS <input id="targetFps" type="range" min="24" max="90" step="1" value="50"></label>
+            </div>
+            <div class="row">
+              <button id="resetCam">Reset view</button>
+              <button id="resetAll" title="Reset all controls">Reset all</button>
+            </div>
+            <div class="hint tiny">Adaptive res keeps FPS stable. Increase Max steps for crisper edges/shadows. On phones, try Font 12–14 and Res 0.8–1.0.</div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div id="floatingControls">
+      <button id="mobilePanelToggle">Controls ☰</button>
+      <button id="mobileFullscreen">⛶</button>
+    </div>
+  </div>
 
 <script>
-// Modular injection of templates
-const app = document.getElementById('app');
-const topbar = document.getElementById('tpl-topbar').content.cloneNode(true);
-const main = document.createElement('div');
-main.id = 'main';
-const viewer = document.getElementById('tpl-viewer').content.cloneNode(true);
-const panel = document.getElementById('tpl-panel').content.cloneNode(true);
-main.appendChild(viewer);
-main.appendChild(panel);
-app.appendChild(topbar);
-app.appendChild(main);
+(() => {
+  'use strict';
+
+  // ---------------------------
+  // Utilities
+  // ---------------------------
+  const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+  const mix = (a,b,t)=>a*(1-t)+b*t;
+  const smoothstep = (a,b,x)=>{const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t);};
+  const TAU = Math.PI*2;
+  const DEG = Math.PI/180;
+
+  // Vector helpers (inline-friendly)
+  const dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const add3=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+  const sub3=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+  const mul3s=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+  const len3=a=>Math.hypot(a[0],a[1],a[2]);
+  const norm3=a=>{const l=len3(a)||1; return [a[0]/l,a[1]/l,a[2]/l];};
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+
+  // 3x3 rotation matrix for Euler XYZ
+  function rotXYZ(rx,ry,rz){
+    const cx=Math.cos(rx),sx=Math.sin(rx);
+    const cy=Math.cos(ry),sy=Math.sin(ry);
+    const cz=Math.cos(rz),sz=Math.sin(rz);
+    // R = Rz * Ry * Rx; apply as v' = R v
+    return [
+      [cz*cy, cz*sy*sx - sz*cx, cz*sy*cx + sz*sx],
+      [sz*cy, sz*sy*sx + cz*cx, sz*sy*cx - cz*sx],
+      [-sy,   cy*sx,             cy*cx]
+    ];
+  }
+  const mulMat3v = (m,v)=>[m[0][0]*v[0]+m[0][1]*v[1]+m[0][2]*v[2], m[1][0]*v[0]+m[1][1]*v[1]+m[1][2]*v[2], m[2][0]*v[0]+m[2][1]*v[1]+m[2][2]*v[2]];
+
+  // Bayer 4x4 dithering threshold [0..1)
+  const BAYER4 = [
+    0,  8,  2, 10,
+   12,  4, 14,  6,
+    3, 11,  1,  9,
+   15,  7, 13,  5
+  ].map(v=> (v+0.5)/16);
+
+  // Halton sequence for jitter
+  function halton(index, base){
+    let f=1, r=0, i=index;
+    while(i>0){ f/=base; r += f*(i%base); i=Math.floor(i/base); }
+    return r;
+  }
+
+  // ---------------------------
+  // Noise (3D value noise + FBM)
+  // ---------------------------
+  function hash32(x){
+    x = (x ^ 61) ^ (x >>> 16);
+    x = x + (x << 3);
+    x = x ^ (x >>> 4);
+    x = x * 0x27d4eb2d;
+    x = x ^ (x >>> 15);
+    return x>>>0;
+  }
+  function rnd3(i,j,k){
+    const n = hash32((i*73856093) ^ (j*19349663) ^ (k*83492791));
+    return (n & 0xfffffff) / 0xfffffff;
+  }
+  function noise3(x,y,z){
+    const xi=Math.floor(x), yi=Math.floor(y), zi=Math.floor(z);
+    const xf=x - xi, yf=y - yi, zf=z - zi;
+    const u=xf*xf*(3-2*xf), v=yf*yf*(3-2*yf), w=zf*zf*(3-2*zf);
+    function r(i,j,k){ return rnd3(xi+i, yi+j, zi+k); }
+    const c000=r(0,0,0), c100=r(1,0,0), c010=r(0,1,0), c110=r(1,1,0);
+    const c001=r(0,0,1), c101=r(1,0,1), c011=r(0,1,1), c111=r(1,1,1);
+    const x00 = mix(c000,c100,u), x10 = mix(c010,c110,u);
+    const x01 = mix(c001,c101,u), x11 = mix(c011,c111,u);
+    const y0 = mix(x00,x10,v), y1 = mix(x01,x11,v);
+    return mix(y0,y1,w);
+  }
+  function fbm3(p, octaves=4, lac=2.0, gain=0.5){
+    let a=0, amp=0.5, f=1, sum=0;
+    for(let i=0;i<octaves;i++){
+      sum += amp * noise3(p[0]*f, p[1]*f, p[2]*f);
+      a += amp; amp *= gain; f *= lac;
+    }
+    return sum/(a||1);
+  }
+
+  // ---------------------------
+  // Palettes
+  // ---------------------------
+  function palGrayscale(t){ t=clamp(t,0,1); const v=Math.round(t*255); return [v,v,v]; }
+  function palFire(t){
+    t=clamp(t,0,1);
+    // black -> deep red -> orange -> yellow -> white
+    const c = t<.3 ? [t/.3*180, 0, 0]
+          : t<.6 ? [180+ (t-.3)/.3*75, (t-.3)/.3*90, 0]
+          : t<.85? [255, 180+(t-.6)/.25*70, 0]
+                 : [255, 250, (t-.85)/.15*255];
+    return c.map(v=>clamp(Math.round(v),0,255));
+  }
+  function palIce(t){
+    t=clamp(t,0,1);
+    // dark navy -> blue -> cyan -> near white
+    const r = Math.round(10 + 40*t);
+    const g = Math.round(50 + 170*t);
+    const b = Math.round(90 + 165*t);
+    return [r,g,b];
+  }
+  function palRainbow(t){
+    t=clamp(t,0,1); // HSV to RGB (H=0..1,S=1,V=1)
+    const h = t*6; const i=Math.floor(h);
+    const f=h - i; const q=1-f;
+    let r=0,g=0,b=0;
+    switch(i%6){
+      case 0: r=1; g=f; b=0; break;
+      case 1: r=q; g=1; b=0; break;
+      case 2: r=0; g=1; b=f; break;
+      case 3: r=0; g=q; b=1; break;
+      case 4: r=f; g=0; b=1; break;
+      case 5: r=1; g=0; b=q; break;
+    }
+    return [Math.round(r*255),Math.round(g*255),Math.round(b*255)];
+  }
+  function palViridis(t){
+    // Approx viridis (license-friendly)
+    t=clamp(t,0,1);
+    const r = Math.round(68 + 167*t - 39*t*t);
+    const g = Math.round(1 + 198*t - 75*t*t);
+    const b = Math.round(84 + 77*t + 90*t*t);
+    return [clamp(r,0,255),clamp(g,0,255),clamp(b,0,255)];
+  }
+  const PALETTES = {
+    grayscale: palGrayscale,
+    fire: palFire,
+    ice: palIce,
+    rainbow: palRainbow,
+    viridis: palViridis,
+  };
+
+  // ---------------------------
+  // ASCII presets
+  // ---------------------------
+  const ASCII_PRESETS = {
+    dense: " .'`^,:;Il!i~+_-?][}{1)(|\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
+    classic: " .:-=+*#%@",
+    blocks: " ░▒▓█",
+    dots: " `·.:;ox%#@",
+    binary: " 01",
+  };
+
+  // ---------------------------
+  // SDF library
+  // ---------------------------
+  const sdSphere = (p, r)=> len3(p) - r;
+  const sdBox = (p, b)=> {
+    const q=[Math.abs(p[0])-b[0], Math.abs(p[1])-b[1], Math.abs(p[2])-b[2]];
+    const outside = Math.hypot(Math.max(q[0],0), Math.max(q[1],0), Math.max(q[2],0));
+    const inside = Math.min(Math.max(q[0], Math.max(q[1], q[2])), 0);
+    return outside + inside;
+  };
+  const sdRoundBox = (p,b,r)=> sdBox(p,b.map(v=>v-r)) - r;
+  const sdTorus = (p, t)=> {
+    const q = [Math.hypot(p[0],p[2]) - t[0], p[1]];
+    return Math.hypot(q[0], q[1]) - t[1];
+  };
+  const sdOctahedron = (p, s)=>{
+    const m = Math.abs(p[0]) + Math.abs(p[1]) + Math.abs(p[2]) - s;
+    return m * 0.57735026919; // 1/sqrt(3)
+  };
+  const sdCapsule = (p, a, b, r)=>{
+    const pa=sub3(p,a), ba=sub3(b,a);
+    const h=clamp(dot3(pa,ba)/dot3(ba,ba),0,1);
+    return len3(sub3(pa, mul3s(ba,h))) - r;
+  };
+  const sdCylinder = (p, r, h)=>{
+    const d = [Math.hypot(p[0],p[2]) - r, Math.abs(p[1])-h];
+    return Math.min(Math.max(d[0], d[1]), 0) + Math.hypot(Math.max(d[0],0), Math.max(d[1],0));
+  };
+  const sdCone = (p, h, r)=>{ // Y-up cone apex at +y
+    const q=[Math.hypot(p[0],p[2]), p[1]];
+    const k = r/h;
+    const d = Math.max(Math.hypot(q[0], q[1]*k) - r, -q[1]-h);
+    return d;
+  };
+  const sdPlane = (p, n, h)=> dot3(p,n)+h; // n normalized, plane at n·p + h = 0
+  const sdEllipsoid = (p, r)=> {
+    // Approximate distance
+    const k = [p[0]/r[0], p[1]/r[1], p[2]/r[2]];
+    return (len3(k)-1) * Math.min(r[0], r[1], r[2]);
+  };
+  const sdTriPrism = (p, h)=>{ // h=[radius,heightY]
+    const q=[Math.abs(p[0]), p[1], Math.abs(p[2])];
+    const d1 = q[2] - h[1];
+    const d2 = Math.max(q[0]*0.866025404 + q[1]*0.5, -q[1]) - h[0]*0.5;
+    return Math.min(Math.max(d1, d2),0) + Math.hypot(Math.max(d1,0), Math.max(d2,0));
+  };
+  const sdHexPrism = (p, h)=>{
+    const q=[Math.abs(p[0]), Math.abs(p[1]), Math.abs(p[2])];
+    const d1 = q[2] - h[1];
+    const d2 = Math.max(q[0]*0.866025404 + q[1]*0.5, q[1]) - h[0];
+    return Math.min(Math.max(d1, d2),0) + Math.hypot(Math.max(d1,0), Math.max(d2,0));
+  };
+  const sdTetrahedron = (p, s)=>{ // regular tetrahedron centered
+    const n1=norm3([ 1, 1, 1]);
+    const n2=norm3([-1,-1, 1]);
+    const n3=norm3([-1, 1,-1]);
+    const n4=norm3([ 1,-1,-1]);
+    const d = Math.max(
+      dot3(p,n1)-s*0.577,
+      Math.max(dot3(p,n2)-s*0.577, Math.max(dot3(p,n3)-s*0.577, dot3(p,n4)-s*0.577))
+    );
+    return d;
+  };
+  const sdPyramid = (p, h)=>{ // square pyramid, y-up, centered
+    const m = [Math.abs(p[0]), Math.abs(p[2])];
+    const d = Math.max(m[0]+m[1] - h, Math.abs(p[1]) - h*0.5);
+    return d;
+  };
+  const sdCross = (p, s)=>{ // union of 3 boxes
+    const b=s;
+    return Math.min(sdBox(p,[b, s, s]), Math.min(sdBox(p,[s, b, s]), sdBox(p,[s, s, b])));
+  };
+  const sdHeart = (p, s)=>{ // 3D implicit heart approximation (distance-ish)
+    const x=p[0]/s, y=p[1]/s, z=p[2]/s;
+    const f = Math.pow(x*x + 9/4*y*y + z*z - 1, 3) - x*x*z*z*z - 9/80*y*y*z*z*z;
+    const g = Math.hypot(2*x*(x*x + 9/4*y*y + z*z - 1) - 2*x*z*z*z,  // df/dx approx
+                         (27/2)*y*(y*y + (4/9)*x*x + (4/9)*z*z - 4/9) - (9/40)*2*y*z*z*z,
+                         2*z*(x*x + 9/4*y*y + z*z - 1) - 3*z*z*(x*x + 9/80*y*y));
+    return f/(g+1e-3); // not exact SDF but OK
+  };
+  const sdEgg = (p, s)=>{ // egg along y
+    const k = 0.2 + 0.8*smoothstep(-1,1,p[1]/s); // radius variation along y
+    const r=[s*k, s, s*k*0.9];
+    return sdEllipsoid(p, r);
+  };
+
+  // Map shapes -> sdf function and params
+  function mapScene(p, state, rotM){
+    // rotate object
+    const pr = mulMat3v(rotM, p);
+    const size = state.size;
+    let d = 1e9;
+    switch(state.shape){
+      case 'Sphere':       d = sdSphere(pr, size); break;
+      case 'Box':          d = sdBox(pr, [size,size,size]); break;
+      case 'RoundedBox':   d = sdRoundBox(pr, [size,size,size], size*0.2); break;
+      case 'Torus':        d = sdTorus(pr, [size*1.0, size*0.38]); break;
+      case 'Octahedron':   d = sdOctahedron(pr, size); break;
+      case 'Capsule':      d = sdCapsule(pr, [-size,0,0], [size,0,0], size*0.35); break;
+      case 'Cylinder':     d = sdCylinder(pr, size*0.7, size*0.8); break;
+      case 'Cone':         d = sdCone(pr, size*0.9, size*0.8); break;
+      case 'Pyramid':      d = sdPyramid(pr, size*1.5); break;
+      case 'Ellipsoid':    d = sdEllipsoid(pr, [size, size*0.7, size*1.2]); break;
+      case 'TriPrism':     d = sdTriPrism(pr, [size*1.7, size*0.8]); break;
+      case 'HexPrism':     d = sdHexPrism(pr, [size*0.9, size*0.7]); break;
+      case 'Plane':        d = sdPlane(pr, [0,1,0], 0.6); break;
+      case 'Cross':        d = sdCross(pr, size*1.2); break;
+      case 'Tetrahedron':  d = sdTetrahedron(pr, size*1.8); break;
+      case 'Star':         d = Math.min(sdOctahedron(pr, size*0.9), sdTorus(pr,[size*0.9, size*0.22])); break; // stylized
+      case 'Heart':        d = sdHeart(pr, size*0.9); break;
+      case 'Egg':          d = sdEgg(pr, size); break;
+    }
+
+    // animated surface noise (displacement)
+    if(state.noiseEnabled){
+      const ns = state.noiseScale;
+      const t = time*state.noiseSpeed;
+      const n = fbm3([pr[0]*ns + 7.1, pr[1]*ns - 11.3 + t, pr[2]*ns + 3.7], state.noiseOct);
+      d -= state.noiseAmt * (n*2-1);
+    }
+    return d;
+  }
+  function getNormal(p, state, rotM){
+    const e = 0.0015;
+    const d = mapScene(p, state, rotM);
+    const nx = mapScene([p[0]+e, p[1], p[2]], state, rotM) - d;
+    const ny = mapScene([p[0], p[1]+e, p[2]], state, rotM) - d;
+    const nz = mapScene([p[0], p[1], p[2]+e], state, rotM) - d;
+    return norm3([nx,ny,nz]);
+  }
+  function softShadow(ro, rd, mint, maxt, k, state, rotM){
+    let res = 1.0, t = mint;
+    for(let i=0; i<32 && t<maxt; i++){
+      const h = mapScene(add3(ro, mul3s(rd,t)), state, rotM);
+      if(h<1e-4) return 0.0;
+      res = Math.min(res, k*h/t);
+      t += clamp(h, 0.01, 0.5);
+    }
+    return clamp(res,0,1);
+  }
+  function ambientOcclusion(p, n, state, rotM){
+    if(!state.ao) return 1;
+    let occ=0, sca=1;
+    for(let i=1;i<=5;i++){
+      const h = i*0.08;
+      const d = mapScene(add3(p, mul3s(n,h)), state, rotM);
+      occ += (h - d) * sca;
+      sca *= 0.7;
+    }
+    return clamp(1 - occ*state.aoStrength, 0, 1);
+  }
+
+  // ---------------------------
+  // App State
+  // ---------------------------
+  const defaultState = {
+    // Scene
+    shape: 'Torus',
+    size: 1.1,
+    rotX: 20, rotY: 35, rotZ: 0,
+    autoSpin: true, spinSpeed: 0.6,
+
+    // Lighting
+    ambient: 0.25, diffuse: 1.05, specular: 0.5, shininess: 32,
+    shadows: true, shadowK: 12,
+    ao: true, aoStrength: 0.9,
+
+    // Noise
+    noiseEnabled: false, noiseAmt: 0.16, noiseScale: 2.0, noiseSpeed: 0.9, noiseOct: 3,
+
+    // ASCII & Color
+    asciiPreset: 'dense',
+    asciiChars: ASCII_PRESETS.dense,
+    invert: false,
+    colorEnabled: true, gamma: 1.0,
+    colorMode: 'luma', palette: 'viridis',
+
+    // Render & Performance
+    fontSize: 14, resScale: 1.0, maxSteps: 72, maxDist: 24,
+    taa: true, taaAmt: 0.6,
+    adaptive: true, targetFps: 50,
+
+    // Camera
+    camDist: 6.0, camYaw: 0, camPitch: 0,
+  };
+  let state = JSON.parse(localStorage.getItem('ascii-raymarcher-state')||'null') || {...defaultState};
+
+  function saveStateThrottled(){
+    if(saveStateThrottled._t) return;
+    saveStateThrottled._t = setTimeout(()=>{
+      localStorage.setItem('ascii-raymarcher-state', JSON.stringify(state));
+      saveStateThrottled._t = null;
+    },250);
+  }
+
+  // ---------------------------
+  // DOM & UI wiring
+  // ---------------------------
+  const $ = sel=>document.querySelector(sel);
+  const canvas = $('#canvas');
+  const fpsEl = $('#fps');
+  const panel = $('#panel');
+  const panelBtn = $('#panelBtn');
+  const fullscreenBtn = $('#fullscreenBtn');
+  const mobilePanelToggle = $('#mobilePanelToggle');
+  const mobileFullscreen = $('#mobileFullscreen');
+
+  // Inputs mapping
+  const bind = (id, type='value', conv=(x)=>x)=>{
+    const el = $('#'+id);
+    const set = (v)=>{ state[id] = conv(v); };
+    const apply = ()=>{
+      const v = (type==='checked')? el.checked : el.value;
+      if(id==='asciiPreset'){
+        state.asciiChars = ASCII_PRESETS[v] || state.asciiChars;
+        $('#asciiChars').value = state.asciiChars;
+      }
+      set(v);
+      if(id==='fontSize' || id==='asciiChars') needFontMetrics = true;
+      if(id==='resScale' || id==='fontSize') needResize = true;
+      saveStateThrottled();
+    };
+    // initialize UI from state
+    if(type==='checked'){ el.checked = !!state[id]; }
+    else el.value = state[id];
+    el.addEventListener('input', apply, {passive:true});
+    el.addEventListener('change', apply);
+    return el;
+  };
+
+  bind('shape');
+  bind('size', 'value', x=>parseFloat(x));
+  bind('rotX', 'value', x=>parseFloat(x));
+  bind('rotY', 'value', x=>parseFloat(x));
+  bind('rotZ', 'value', x=>parseFloat(x));
+  bind('autoSpin','checked', Boolean);
+  bind('spinSpeed','value', x=>parseFloat(x));
+
+  bind('ambient','value', x=>parseFloat(x));
+  bind('diffuse','value', x=>parseFloat(x));
+  bind('specular','value', x=>parseFloat(x));
+  bind('shininess','value', x=>parseInt(x));
+  bind('shadows','checked', Boolean);
+  bind('shadowK','value', x=>parseFloat(x));
+  bind('ao','checked', Boolean);
+  bind('aoStrength','value', x=>parseFloat(x));
+
+  bind('noiseEnabled', 'checked', Boolean);
+  bind('noiseAmt','value', x=>parseFloat(x));
+  bind('noiseScale','value', x=>parseFloat(x));
+  bind('noiseSpeed','value', x=>parseFloat(x));
+  bind('noiseOct','value', x=>parseInt(x));
+
+  bind('asciiPreset');
+  bind('asciiChars');
+  bind('invert','checked', Boolean);
+  bind('colorEnabled','checked', Boolean);
+  bind('gamma','value', x=>parseFloat(x));
+  bind('colorMode');
+  bind('palette');
+
+  bind('fontSize','value', x=>parseInt(x));
+  bind('resScale','value', x=>parseFloat(x));
+  bind('maxSteps','value', x=>parseInt(x));
+  bind('maxDist','value', x=>parseFloat(x));
+  bind('taa','checked', Boolean);
+  bind('taaAmt','value', x=>parseFloat(x));
+  bind('adaptive','checked', Boolean);
+  bind('targetFps','value', x=>parseInt(x));
+
+  $('#resetCam').addEventListener('click', ()=>{
+    state.camDist = defaultState.camDist;
+    state.camYaw = 0; state.camPitch = 0;
+    state.rotX = defaultState.rotX; state.rotY=defaultState.rotY; state.rotZ=defaultState.rotZ;
+    saveStateThrottled();
+  });
+  $('#resetAll').addEventListener('click', ()=>{
+    state = {...defaultState};
+    for(const [k,v] of Object.entries(state)){
+      const el = document.getElementById(k);
+      if(!el) continue;
+      if(el.type==='checkbox') el.checked = !!v;
+      else el.value = v;
+    }
+    needFontMetrics = true; needResize = true;
+    saveStateThrottled();
+  });
+
+  function togglePanel(open){
+    if(window.matchMedia('(max-width:860px)').matches){
+      panel.classList.toggle('open', open ?? !panel.classList.contains('open'));
+    }else{
+      // desktop: panel always visible; no-op
+    }
+  }
+  panelBtn.addEventListener('click', ()=> togglePanel());
+  mobilePanelToggle.addEventListener('click', ()=> togglePanel());
+  fullscreenBtn.addEventListener('click', toggleFullscreen);
+  mobileFullscreen.addEventListener('click', toggleFullscreen);
+
+  function toggleFullscreen(){
+    const doc = document;
+    const el = doc.documentElement;
+    if(!doc.fullscreenElement && el.requestFullscreen){
+      el.requestFullscreen();
+    }else if(doc.exitFullscreen){
+      doc.exitFullscreen();
+    }
+  }
+
+  // Close panel when clicking outside on mobile
+  document.addEventListener('click', (e)=>{
+    if(!panel.classList.contains('open')) return;
+    const inside = panel.contains(e.target) || e.target===panelBtn || e.target===mobilePanelToggle;
+    if(!inside) panel.classList.remove('open');
+  });
+
+  // ---------------------------
+  // Canvas and font metrics
+  // ---------------------------
+  const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+  const ctx = canvas.getContext('2d', {alpha:false, desynchronized:true, willReadFrequently:false});
+
+  let needResize = true;
+  let needFontMetrics = true;
+  let charW = 8, charH = 16, baseline = 12;
+  let gridCols = 80, gridRows = 45;
+
+  function updateFont(){
+    ctx.font = `bold ${state.fontSize}px ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono","Courier New", monospace`;
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    const m = ctx.measureText('M');
+    const h = (m.actualBoundingBoxAscent||state.fontSize*0.8) + (m.actualBoundingBoxDescent||state.fontSize*0.3);
+    charH = Math.ceil(h);
+    charW = Math.ceil(ctx.measureText('█').width); // wide glyph
+    baseline = Math.ceil(m.actualBoundingBoxAscent||state.fontSize*0.8);
+  }
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(2, Math.floor(rect.width * dpr));
+    canvas.height = Math.max(2, Math.floor(rect.height * dpr));
+    ctx.setTransform(dpr,0,0,dpr,0,0); // draw in CSS pixels
+    updateFont();
+    // Base grid in CSS pixels
+    const baseCols = Math.max(8, Math.floor(rect.width / charW));
+    const baseRows = Math.max(6, Math.floor(rect.height / charH));
+    gridCols = Math.max(8, Math.floor(baseCols * state.resScale));
+    gridRows = Math.max(6, Math.floor(baseRows * state.resScale));
+    rebuildBuffers();
+  }
+  window.addEventListener('resize', ()=>{ needResize = true; }, {passive:true});
+  const ro = new ResizeObserver(()=>{ needResize = true; });
+  ro.observe($('#viewer'));
+
+  // ---------------------------
+  // Buffers for TAA / momentum
+  // ---------------------------
+  let prevLuma=null, prevRGB=null, momentumBuff=null;
+  function rebuildBuffers(){
+    const N = gridCols*gridRows;
+    prevLuma = new Float32Array(N);
+    prevRGB = new Float32Array(N*3);
+    momentumBuff = new Float32Array(N);
+  }
+
+  // ---------------------------
+  // Camera + Input
+  // ---------------------------
+  const pointer = { active:false, x:0, y:0, lastX:0, lastY:0, id:null, second:null, lastDist:0 };
+  const key = {};
+  window.addEventListener('keydown', e=>{ key[e.key.toLowerCase()] = true; if(['w','a','s','d','q','e','r'].includes(e.key.toLowerCase())) e.preventDefault(); });
+  window.addEventListener('keyup', e=>{ key[e.key.toLowerCase()] = false; });
+
+  // Pointer + touch gestures
+  canvas.addEventListener('pointerdown', (e)=>{
+    canvas.setPointerCapture(e.pointerId);
+    if(pointer.active && pointer.second==null && e.pointerId!==pointer.id){
+      pointer.second = e.pointerId;
+      pointer.lastDist = 0;
+    }else if(!pointer.active){
+      pointer.active = true; pointer.id = e.pointerId;
+      pointer.x = pointer.lastX = e.clientX;
+      pointer.y = pointer.lastY = e.clientY;
+    }
+  });
+  canvas.addEventListener('pointermove', (e)=>{
+    if(!pointer.active) return;
+    if(pointer.second!=null){
+      // pinch zoom: get both pointers
+      const a = e.pointerId===pointer.id? {x:e.clientX, y:e.clientY} : {x:pointer.x, y:pointer.y};
+      const others = e.pointerId===pointer.second? {x:e.clientX, y:e.clientY} : {x:pointer.lastX, y:pointer.lastY};
+      const dx=a.x-others.x, dy=a.y-others.y;
+      const dist=Math.hypot(dx,dy);
+      if(pointer.lastDist>0){
+        const delta = (dist - pointer.lastDist) * 0.01;
+        state.camDist = clamp(state.camDist - delta, 1.5, 24);
+      }
+      pointer.lastDist = dist;
+    }else if(e.pointerId===pointer.id){
+      const dx = e.clientX - pointer.lastX;
+      const dy = e.clientY - pointer.lastY;
+      pointer.lastX = e.clientX; pointer.lastY = e.clientY;
+      state.camYaw += dx * 0.004;
+      state.camPitch = clamp(state.camPitch + dy * 0.004, -1.35, 1.35);
+    }
+  }, {passive:false});
+  canvas.addEventListener('pointerup', (e)=>{
+    if(e.pointerId===pointer.second) pointer.second=null;
+    else if(e.pointerId===pointer.id){ pointer.active=false; pointer.id=null; }
+  });
+  canvas.addEventListener('wheel', (e)=>{
+    e.preventDefault();
+    const s = Math.exp(-e.deltaY * 0.0012);
+    state.camDist = clamp(state.camDist * s, 1.5, 24);
+  }, {passive:false});
+
+  // WASD / QE
+  function updateKeyboard(dt){
+    const speed = 0.8 * dt;
+    if(key['r']){ state.camYaw=0; state.camPitch=0; state.camDist=defaultState.camDist; }
+    // subtle orbit tweaks
+    if(key['a']) state.camYaw -= speed;
+    if(key['d']) state.camYaw += speed;
+    if(key['w']) state.camPitch = clamp(state.camPitch - speed, -1.35, 1.35);
+    if(key['s']) state.camPitch = clamp(state.camPitch + speed, -1.35, 1.35);
+    if(key['q']) state.camDist = clamp(state.camDist + speed*2, 1.5, 24);
+    if(key['e']) state.camDist = clamp(state.camDist - speed*2, 1.5, 24);
+  }
+
+  // ---------------------------
+  // Render
+  // ---------------------------
+  let frame = 1;
+  let lastTime = performance.now();
+  let fpsEMA = 60;
+  let time = 0;
+
+  function getCameraBasis(){
+    const yaw = state.camYaw, pitch = state.camPitch;
+    const forward = [
+      Math.cos(pitch)*Math.sin(yaw),
+      Math.sin(pitch),
+      Math.cos(pitch)*Math.cos(yaw)
+    ];
+    const target = [0,0,0];
+    const camPos = sub3(target, mul3s(forward, state.camDist));
+    const up=[0,1,0];
+    const right = norm3(cross(forward, up));
+    const camUp = cross(right, forward);
+    return {camPos, forward:norm3(forward), right, up:camUp};
+  }
+
+  function paletteColor(t){
+    return PALETTES[state.palette](t);
+  }
+
+  function render(){
+    const now = performance.now();
+    let dt = Math.max(1/120, (now - lastTime) / 1000);
+    lastTime = now;
+    if(!document.hasFocus()) dt = Math.min(dt, 1/60);
+    fpsEMA = mix(fpsEMA, 1/dt, 0.1);
+    time += dt;
+    fpsEl.textContent = `FPS: ${Math.round(fpsEMA)}`;
+
+    updateKeyboard(dt);
+
+    if(state.autoSpin){
+      state.rotY += state.spinSpeed; // deg/s (scaled per frame)
+      if(state.rotY>180) state.rotY-=360; if(state.rotY<-180) state.rotY+=360;
+    }
+
+    // Adaptive resolution
+    if(state.adaptive && frame % 10 === 0){
+      const target = state.targetFps;
+      const headroom = fpsEMA - target;
+      if(headroom < -2 && state.resScale > 0.55){
+        state.resScale = Math.max(0.5, state.resScale - 0.05);
+        $('#resScale').value = state.resScale;
+        needResize = true;
+      }else if(headroom > 6 && state.resScale < 1.5){
+        state.resScale = Math.min(2.0, state.resScale + 0.03);
+        $('#resScale').value = state.resScale;
+        needResize = true;
+      }
+    }
+
+    if(needFontMetrics){ updateFont(); needFontMetrics=false; needResize=true; }
+    if(needResize){ resize(); needResize=false; }
+
+    // Clear background
+    ctx.save();
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0, canvas.width/dpr, canvas.height/dpr);
+    ctx.restore();
+
+    // Camera basis
+    const {camPos, forward, right, up} = getCameraBasis();
+    const fov = 50*DEG, tFov = Math.tan(fov*0.5);
+
+    // Object rotation matrix
+    const rotM = rotXYZ(state.rotX*DEG, state.rotY*DEG, state.rotZ*DEG);
+
+    // TAA jitter
+    const jitterX = state.taa ? (halton(frame,2)-0.5) : 0;
+    const jitterY = state.taa ? (halton(frame,3)-0.5) : 0;
+
+    // ASCII & drawing
+    const ascii = state.asciiChars || ASCII_PRESETS.dense;
+    const Nchars = ascii.length;
+    const gamma = state.gamma;
+    const inv = state.invert;
+
+    const cols=gridCols, rows=gridRows;
+    const aspect = (cols*charW) / (rows*charH);
+    const maxSteps = state.maxSteps|0, maxDist = state.maxDist;
+
+    const taaBlend = state.taa ? clamp(state.taaAmt,0,0.95) : 0;
+
+    const colorMode = state.colorMode;
+    const useColor = !!state.colorEnabled;
+
+    // Raymarch
+    const ox = (1/cols) * (jitterX);
+    const oy = (1/rows) * (jitterY);
+
+    // Potential bounding: sphere radius
+    const boundR = state.size*2.2 + (state.noiseEnabled ? state.noiseAmt*2 : 0.0);
+
+    // Draw either per-row (fast) or per-char (color)
+    if(!useColor){
+      ctx.fillStyle = '#fff';
+      for(let j=0;j<rows;j++){
+        let rowStr = '';
+        const v = ((j+0.5+oy)/rows)*2 - 1; // -1..1
+        for(let i=0;i<cols;i++){
+          const u = ((i+0.5+ox)/cols)*2 - 1;
+          // primary ray dir
+          let rd = norm3(add3(forward,
+                   add3( mul3s(right, u*tFov*aspect),
+                         mul3s(up,    -v*tFov))));
+          const ro = camPos.slice();
+
+          // Cheap culling: sphere intersection test for bounding
+          // (ro + rd*t), solve |(ro) + rd t| = R
+          // We'll skip if ray misses sphere at origin, except infinite plane case
+          if(state.shape!=='Plane'){
+            const b = dot3(ro, rd);
+            const c = dot3(ro,ro) - boundR*boundR;
+            const h = b*b - c;
+            if(h < 0){ // miss
+              rowStr += ' ';
+              continue;
+            }
+          }
+
+          // march
+          let t=0, hit=false;
+          let steps=0;
+          for(; steps<maxSteps && t<maxDist; steps++){
+            const p = add3(ro, mul3s(rd,t));
+            const d = mapScene(p, state, rotM);
+            if(d<0.001){ hit=true; break; }
+            t += clamp(d, 0.02, 0.8);
+          }
+
+          let luma = 0;
+          let specVal = 0;
+          if(hit){
+            const p = add3(ro, mul3s(rd,t));
+            const n = getNormal(p, state, rotM);
+
+            // Lighting
+            const L = norm3([0.7, 0.9, 0.4]); // key light
+            const H = norm3(add3(L, mul3s(rd,-1)));
+            const NoL = Math.max(0, dot3(n,L));
+            specVal = Math.pow(Math.max(0, dot3(n,H)), state.shininess);
+            let diff = state.diffuse * NoL;
+            let amb = state.ambient;
+
+            let sh = 1;
+            if(state.shadows){
+              sh = softShadow(add3(p, mul3s(n,0.01)), L, 0.02, 8, 1/state.shadowK, state, rotM);
+            }
+
+            const ao = ambientOcclusion(p, n, state, rotM);
+
+            let shade = amb + diff*sh*ao + state.specular*specVal;
+            shade = Math.pow(clamp(shade,0,1), 1/gamma);
+            luma = shade;
+          }else{
+            luma = 0;
+          }
+
+          // Temporal blend
+          const idx = j*cols + i;
+          const prev = prevLuma[idx];
+          const blended = mix(luma, prev, taaBlend);
+          momentumBuff[idx] = Math.abs(luma - prev);
+          prevLuma[idx] = blended;
+
+          let vLum = inv ? 1 - blended : blended;
+
+          // Dither
+          const dth = BAYER4[(i&3) + ((j&3)<<2)];
+          vLum = clamp(vLum + (dth-0.5)/Nchars, 0, 1);
+
+          const k = Math.floor(vLum*(Nchars-1));
+          rowStr += ascii[k] || ' ';
+        }
+        // draw row
+        const x = Math.floor((canvas.width/dpr - cols*charW)/2);
+        const y = Math.floor((canvas.height/dpr - rows*charH)/2) + baseline + j*charH;
+        ctx.fillText(rowStr, x, y);
+      }
+    }else{
+      // Per-character colored draw
+      for(let j=0;j<rows;j++){
+        const v = ((j+0.5+oy)/rows)*2 - 1; // -1..1
+        for(let i=0;i<cols;i++){
+          const u = ((i+0.5+ox)/cols)*2 - 1;
+          let rd = norm3(add3(forward,
+                   add3( mul3s(right, u*tFov*aspect),
+                         mul3s(up,    -v*tFov))));
+          const ro = camPos.slice();
+
+          if(state.shape!=='Plane'){
+            const b = dot3(ro, rd);
+            const c = dot3(ro,ro) - boundR*boundR;
+            const h = b*b - c;
+            if(h < 0){
+              const idx = j*cols + i;
+              const prev = prevLuma[idx];
+              const blended = mix(0, prev, taaBlend);
+              prevLuma[idx]=blended;
+              momentumBuff[idx] = Math.abs(0 - prev);
+              continue;
+            }
+          }
+
+          // march
+          let t=0, hit=false, steps=0;
+          for(; steps<maxSteps && t<maxDist; steps++){
+            const p = add3(ro, mul3s(rd,t));
+            const d = mapScene(p, state, rotM);
+            if(d<0.001){ hit=true; break; }
+            t += clamp(d, 0.02, 0.8);
+          }
+
+          let luma=0, specVal=0, depth=0, Nx=0, Ny=0, Nz=0;
+          if(hit){
+            const p = add3(ro, mul3s(rd,t));
+            const n = getNormal(p, state, rotM);
+            Nx=n[0]; Ny=n[1]; Nz=n[2];
+            const L = norm3([0.7, 0.9, 0.4]);
+            const H = norm3(add3(L, mul3s(rd,-1)));
+            const NoL = Math.max(0, dot3(n,L));
+            specVal = Math.pow(Math.max(0, dot3(n,H)), state.shininess);
+            const amb = state.ambient;
+            let diff = state.diffuse * NoL;
+            let sh = 1;
+            if(state.shadows){
+              sh = softShadow(add3(p, mul3s(n,0.01)), L, 0.02, 8, 1/state.shadowK, state, rotM);
+            }
+            const ao = ambientOcclusion(p, n, state, rotM);
+            let shade = amb + diff*sh*ao + state.specular*specVal;
+            shade = Math.pow(clamp(shade,0,1), 1/gamma);
+            luma = shade;
+            depth = clamp(t/state.maxDist, 0, 1);
+          }else{
+            luma = 0; depth=1;
+          }
+
+          const idx = j*cols + i;
+          const prev = prevLuma[idx];
+          const blended = mix(luma, prev, taaBlend);
+          prevLuma[idx]=blended;
+          const mom = Math.abs(luma - prev);
+          momentumBuff[idx] = mom;
+
+          let tone = inv ? 1 - blended : blended;
+
+          // Dither for ASCII index
+          const dth = BAYER4[(i&3) + ((j&3)<<2)];
+          tone = clamp(tone + (dth-0.5)/Nchars, 0, 1);
+          const k = Math.floor(tone*(Nchars-1));
+          const ch = ascii[k] || ' ';
+
+          let tint = [255,255,255];
+          switch(colorMode){
+            case 'luma': tint = paletteColor(blended); break;
+            case 'depth': tint = paletteColor(1-depth); break;
+            case 'normal': tint = paletteColor(0.5* (Nx+Ny+Nz)/1.5 + 0.5); break;
+            case 'specular': tint = paletteColor(clamp(specVal,0,1)); break;
+            case 'momentum': tint = paletteColor(clamp(mom*4, 0,1)); break;
+          }
+
+          const x = Math.floor((canvas.width/dpr - cols*charW)/2) + i*charW;
+          const y = Math.floor((canvas.height/dpr - rows*charH)/2) + baseline + j*charH;
+          ctx.fillStyle = `rgb(${tint[0]},${tint[1]},${tint[2]})`;
+          ctx.fillText(ch, x, y);
+        }
+      }
+    }
+
+    // Next
+    frame++;
+    requestAnimationFrame(render);
+  }
+
+  // Kick off
+  resize();
+  requestAnimationFrame(render);
+
+  // Pause rendering when tab hidden to save battery
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='visible'){
+      lastTime = performance.now();
+    }
+  });
+
+})();
 </script>
-<script src="js/math_utils.js"></script>
-<script src="js/noise_value_noise_fbm.js"></script>
-<script src="js/sdfs.js"></script>
-<script src="js/scene_map_optimized.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/ascii_dither.js"></script>
-<script src="js/app_state.js"></script>
-<script src="js/ui_wiring.js"></script>
-<script src="js/resize_metrics_grid_cache.js"></script>
-<script src="js/input.js"></script>
-<!-- merged into utils.js -->
-<script src="js/ray_helpers_culling.js"></script>
-<script src="js/render_loop_taa_adaptive_res.js"></script>
-<script src="js/boot.js"></script>
 </body>
 </html>
